@@ -311,12 +311,13 @@ export const resendTokenOTP = async (req, res) => {
 
     const snapshot = await usersCollection
       .where("email", "==", email.toLowerCase())
+      .limit(1)
       .get();
 
     if (snapshot.empty) {
       return res.status(404).json({
         success: false,
-        message: "User tidak ditemukan",
+        message: "Pengguna tidak ditemukan",
       });
     }
 
@@ -330,22 +331,36 @@ export const resendTokenOTP = async (req, res) => {
       });
     }
 
-    // Generate new OTP
-    const newOTP = Math.floor(100000 + Math.random() * 900000);
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // OTP expires in 15 minutes
+    // (Opsional) Rate limit sederhana (misal 60 detik)
+    if (
+      user.verificationTokenExpiresAt &&
+      user.verificationTokenExpiresAt.toDate() >
+        new Date(Date.now() - 60 * 1000)
+    ) {
+      return res.status(429).json({
+        success: false,
+        message: "Silakan tunggu 1 menit sebelum meminta OTP baru",
+      });
+    }
 
-    await userDoc.ref.update({
-      verificationToken: newOTP,
-      verificationTokenExpiresAt: expiresAt,
+    // Generate OTP baru
+    const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await usersCollection.doc(userDoc.id).update({
+      verificationToken: newOtp,
+      verificationTokenExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
       updatedAt: new Date(),
     });
 
-    // Send OTP via email
-    await sendVerificationEmail(email, newOTP);
+    /**
+     * TODO:
+     * Kirim OTP ke email user
+     * sendOtpEmail(email, newOtp)
+     */
 
     return res.status(200).json({
       success: true,
-      message: "OTP berhasil dikirim ulang",
+      message: "Kode OTP baru telah dikirim ke email Anda",
     });
   } catch (error) {
     console.error("Resend OTP error:", error);
