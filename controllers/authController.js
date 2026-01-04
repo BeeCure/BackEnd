@@ -62,7 +62,6 @@ export const register = async (req, res) => {
 
       // STATUS
       status: isPractitioner ? "PENDING" : "ACTIVE",
-      approvalStatus: isPractitioner ? "PENDING" : "DONE",
       isEmailVerified: false,
 
       // OTP
@@ -78,6 +77,7 @@ export const register = async (req, res) => {
     // Hanya PRACTITIONER yang punya facebookUrl
     if (isPractitioner) {
       newUser.facebookUrl = facebookUrl;
+      newUser.approvalStatus = "PENDING";
     }
 
     await usersCollection.doc(userId).set(newUser);
@@ -236,12 +236,13 @@ export const verifyTokenOTP = async (req, res) => {
 
     const snapshot = await usersCollection
       .where("email", "==", email.toLowerCase())
+      .limit(1)
       .get();
 
     if (snapshot.empty) {
       return res.status(404).json({
         success: false,
-        message: "User tidak ditemukan",
+        message: "Pengguna tidak ditemukan",
       });
     }
 
@@ -255,22 +256,31 @@ export const verifyTokenOTP = async (req, res) => {
       });
     }
 
-    if (
-      user.verificationToken !== otp ||
-      user.verificationTokenExpiresAt.toDate() < new Date()
-    ) {
+    // Cek OTP
+    if (user.verificationToken !== otp) {
       return res.status(400).json({
         success: false,
-        message: "OTP tidak valid atau kadaluarsa",
+        message: "Kode OTP tidak valid",
       });
     }
 
-    await userDoc.ref.update({
+    // Cek expired
+    if (user.verificationTokenExpiresAt.toDate() < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: "Kode OTP telah kedaluwarsa",
+      });
+    }
+
+    // Update status user
+    const updateData = {
       isEmailVerified: true,
       verificationToken: null,
       verificationTokenExpiresAt: null,
       updatedAt: new Date(),
-    });
+    };
+
+    await usersCollection.doc(userDoc.id).update(updateData);
 
     return res.status(200).json({
       success: true,
