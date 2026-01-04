@@ -1,4 +1,3 @@
-// import bcryptjs from "bcryptjs";
 import bcrypt from "bcrypt";
 import { generateTokenSetCookie } from "../utils/generateTokenSetCookie.js";
 import { v4 as uuidv4 } from "uuid";
@@ -8,23 +7,38 @@ const usersCollection = db.collection("users");
 
 export const register = async (req, res) => {
   try {
-    const { email, password, nama, role } = req.body;
+    const { email, password, name, role, phone, facebookUrl } = req.body;
 
-    if (!email || !password || !nama || !role) {
+    if (!email || !password || !name || !role || !phone) {
       return res.status(400).json({
         success: false,
         message: "Oooppss! Lengkapi dulu data anda!",
       });
     }
 
-    const userAlreadyExists = await usersCollection
-      .where("email", "==", email)
-      .get();
-
-    if (!userAlreadyExists.empty) {
+    const allowedRoles = ["USER", "PRACTITIONER"];
+    if (!allowedRoles.includes(role)) {
       return res.status(400).json({
         success: false,
-        message: "Pengguna sudah ada, silahkan masukkan kembali!",
+        message: "Role tidak valid. Pilih USER atau PRACTITIONER!",
+      });
+    }
+
+    if (role === "PRACTITIONER" && !facebookUrl) {
+      return res.status(400).json({
+        success: false,
+        message: "Link Facebook wajib diisi untuk praktisi",
+      });
+    }
+
+    const existingUser = await usersCollection
+      .where("email", "==", email.toLowerCase())
+      .get();
+
+    if (!existingUser.empty) {
+      return res.status(400).json({
+        success: false,
+        message: "Email sudah terdaftar",
       });
     }
 
@@ -33,31 +47,49 @@ export const register = async (req, res) => {
     const verificationToken = Math.floor(
       100000 + Math.random() * 900000
     ).toString();
+
     const userId = uuidv4();
+
+    const isPractitioner = role === "PRACTITIONER";
 
     const newUser = {
       id: userId,
       email: email.toLowerCase(),
-      nama,
+      name,
       role,
+      phone,
       password: hashedPassword,
+
+      // STATUS
+      status: isPractitioner ? "PENDING" : "ACTIVE",
+      approvalStatus: isPractitioner ? "PENDING" : "DONE",
+      isEmailVerified: false,
+
+      // OTP
       verificationToken,
-      verificationTokenExpiresAt: new Date(Date.now() + 1 + 60 * 60 * 1000),
+      verificationTokenExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
+
+      // METADATA
       createdAt: new Date(),
       lastLogin: null,
       previousLogin: null,
     };
 
-    await usersCollection.doc(userId).set(newUser);
+    // Hanya PRACTITIONER yang punya facebookUrl
+    if (isPractitioner) {
+      newUser.facebookUrl = facebookUrl;
+    }
 
-    generateTokenSetCookie(res, newUser);
+    await usersCollection.doc(userId).set(newUser);
 
     return res.status(201).json({
       success: true,
-      message: "Yeayyy! Pengguna berhasil dibuat",
+      message: isPractitioner
+        ? "Registrasi berhasil. Menunggu verifikasi admin."
+        : "Registrasi berhasil. Silakan verifikasi email.",
     });
   } catch (error) {
-    console.error("Error", error);
+    console.error("Register error:", error);
     return res.status(500).json({
       success: false,
       message: "Server internal sedang bermasalah",
@@ -187,6 +219,129 @@ export const changePassword = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Terjadi kesalahan server!",
+    });
+  }
+};
+
+export const verifyTokenOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Email dan OTP wajib diisi",
+      });
+    }
+
+    const snapshot = await usersCollection
+      .where("email", "==", email.toLowerCase())
+      .get();
+
+    if (snapshot.empty) {
+      return res.status(404).json({
+        success: false,
+        message: "User tidak ditemukan",
+      });
+    }
+
+    const userDoc = snapshot.docs[0];
+    const user = userDoc.data();
+
+    if (user.isEmailVerified) {
+      return res.status(400).json({
+        success: false,
+        message: "Email sudah diverifikasi",
+      });
+    }
+
+    if (
+      user.verificationToken !== otp ||
+      user.verificationTokenExpiresAt.toDate() < new Date()
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP tidak valid atau kadaluarsa",
+      });
+    }
+
+    await userDoc.ref.update({
+      isEmailVerified: true,
+      verificationToken: null,
+      verificationTokenExpiresAt: null,
+      updatedAt: new Date(),
+    });
+
+    return res.status(200).json({
+      success: true,
+      message:
+        user.role === "PRACTITIONER"
+          ? "Email berhasil diverifikasi. Menunggu persetujuan admin."
+          : "Email berhasil diverifikasi. Silakan login.",
+    });
+  } catch (error) {
+    console.error("Verify OTP error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server internal sedang bermasalah",
+    });
+  }
+};
+
+export const resendTokenOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email wajib diisi",
+      });
+    }
+
+    const snapshot = await usersCollection
+      .where("email", "==", email.toLowerCase())
+      .get();
+
+    if (snapshot.empty) {
+      return res.status(404).json({
+        success: false,
+        message: "User tidak ditemukan",
+      });
+    }
+
+    const userDoc = snapshot.docs[0];
+    const user = userDoc.data();
+
+    if (user.isEmailVerified) {
+      return res.status(400).json({
+        success: false,
+        message: "Email sudah diverifikasi",
+      });
+    }
+
+    // Generate new OTP
+    const newOTP = Math.floor(100000 + Math.random() * 900000);
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // OTP expires in 15 minutes
+
+    await userDoc.ref.update({
+      verificationToken: newOTP,
+      verificationTokenExpiresAt: expiresAt,
+      updatedAt: new Date(),
+    });
+
+    // Send OTP via email
+    await sendVerificationEmail(email, newOTP);
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP berhasil dikirim ulang",
+    });
+  } catch (error) {
+    console.error("Resend OTP error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server internal sedang bermasalah",
     });
   }
 };
