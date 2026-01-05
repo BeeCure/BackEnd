@@ -105,7 +105,7 @@ export const login = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Email dan password anda tidak sesuai!",
+        message: "Email dan password anda wajib diisi!",
       });
       // Check if email or password is empty
     } else if (email === "" || password === "") {
@@ -139,6 +139,32 @@ export const login = async (req, res) => {
       });
     }
 
+    // Email verification check
+    if (!user.isEmailVerified) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Email anda belum terverifikasi. Silakan verifikasi terlebih dahulu.",
+      });
+    }
+
+    // User status check
+    if (user.status !== "ACTIVE") {
+      return res.status(403).json({
+        success: false,
+        message: "Akun anda belum aktif. Silakan hubungi admin.",
+      });
+    }
+
+    // User Practitioner approval check
+    if (user.role === "PRACTITIONER" && user.approvalStatus !== "APPROVED") {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Akun praktisi anda belum disetujui. Silakan tunggu konfirmasi dari admin.",
+      });
+    }
+
     // Generate token dan set cookie login
     generateTokenSetCookie(res, user);
 
@@ -157,17 +183,30 @@ export const login = async (req, res) => {
     console.error("Error", error);
     return res.status(500).json({
       success: false,
-      message: "Internal Server Error",
+      message: "Server internal sedang bermasalah",
     });
   }
 };
 
 export const logout = async (req, res) => {
-  res.cookie("token", "", { httpOnly: true, expires: new Date(0) });
-  return res.status(200).json({
-    success: true,
-    message: "Anda berhasil keluar!",
-  });
+  try {
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Anda berhasil keluar!",
+    });
+  } catch (error) {
+    console.error("Logout Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Gagal logout. Server internal sedang bermasalah",
+    });
+  }
 };
 
 export const changePassword = async (req, res) => {
@@ -300,7 +339,7 @@ export const verifyTokenOTP = async (req, res) => {
 
 export const resendTokenOTP = async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = req.body?.email;
 
     if (!email) {
       return res.status(400).json({
