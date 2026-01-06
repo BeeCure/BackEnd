@@ -1,15 +1,19 @@
 import express from "express";
 import dotenv from "dotenv";
 import authRoutes from "./routes/authRoute.js";
+import adminRoutes from "./routes/adminRoute.js";
+import cookieParser from "cookie-parser";
 
 dotenv.config({ silent: true });
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+app.use(cookieParser());
 
 // Endpoint
 app.use("/api/auth", authRoutes);
+app.use("/api/admin/practitioners", adminRoutes);
 
 // Test
 app.get("/", (req, res) => {

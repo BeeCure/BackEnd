@@ -7,7 +7,7 @@ export const generateTokenSetCookie = async (res, user) => {
     { expiresIn: "1d" }
   );
 
-  const isProduction = process.env.NODE_ENV === "development";
+  const isProduction = process.env.NODE_ENV === "production";
 
   res.cookie("token", token, {
     httpOnly: true,

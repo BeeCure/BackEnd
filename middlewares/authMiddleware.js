@@ -6,7 +6,6 @@ const usersCollection = db.collection("users");
 export const protect = async (req, res, next) => {
   try {
     const token = req.cookies?.token;
-
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -14,12 +13,9 @@ export const protect = async (req, res, next) => {
       });
     }
 
-    // Verifikasi JWT
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = decoded.userId;
+    const userDoc = await usersCollection.doc(decoded.userId).get();
 
-    // Ambil user dari Firestore
-    const userDoc = await usersCollection.doc(userId).get();
     if (!userDoc.exists) {
       return res.status(401).json({
         success: false,
@@ -29,32 +25,13 @@ export const protect = async (req, res, next) => {
 
     const userData = userDoc.data();
 
-    // Email verification check
-    if (!userData.isEmailVerified) {
-      return res.status(403).json({
-        success: false,
-        message:
-          "Email anda belum terverifikasi. Silakan verifikasi terlebih dahulu.",
-      });
-    }
-
-    // User Practitioner approval check
-    if (
-      userData.role === "PRACTITIONER" &&
-      userData.approvalStatus !== "APPROVED"
-    ) {
-      return res.status(403).json({
-        success: false,
-        message:
-          "Akun praktisi anda belum disetujui. Silakan tunggu konfirmasi dari admin.",
-      });
-    }
-
     req.user = {
-      id: user.id,
-      role: user.role,
-      name: user.name,
-      email: user.email,
+      id: userDoc.id,
+      role: userData.role,
+      email: userData.email,
+      name: userData.name,
+      isEmailVerified: userData.isEmailVerified,
+      approvalStatus: userData.approvalStatus,
     };
 
     next();
