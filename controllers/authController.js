@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import { generateTokenSetCookie } from "../utils/generateTokenSetCookie.js";
 import { v4 as uuidv4 } from "uuid";
 import db from "../firestore.js";
@@ -221,59 +222,6 @@ export const logout = async (req, res) => {
   }
 };
 
-export const changePassword = async (req, res) => {
-  try {
-    const { email, oldPassword, newPassword } = req.body;
-
-    if (!email || !oldPassword || !newPassword) {
-      return res.status(400).json({
-        success: false,
-        message: "Lengkapi data email, password lama, dan password baru!",
-      });
-    }
-
-    const snapshot = await usersCollection
-      .where("email", "==", email.toLowerCase())
-      .limit(1)
-      .get();
-
-    if (snapshot.empty) {
-      return res.status(404).json({
-        success: false,
-        message: "Pengguna tidak ditemukan!",
-      });
-    }
-
-    const userDoc = snapshot.docs[0];
-    const user = userDoc.data();
-
-    const isMatch = await bcrypt.compare(oldPassword, user.password);
-    if (!isMatch) {
-      return res.status(400).json({
-        success: false,
-        message: "Password lama anda salah!",
-      });
-    }
-
-    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-
-    await usersCollection.doc(user.id).update({
-      password: hashedNewPassword,
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "Password berhasil diubah!",
-    });
-  } catch (error) {
-    console.error("Error", error);
-    return res.status(500).json({
-      success: false,
-      message: "Terjadi kesalahan server!",
-    });
-  }
-};
-
 export const verifyTokenOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -431,3 +379,169 @@ export const resendTokenOTP = async (req, res) => {
     });
   }
 };
+
+export const changePassword = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { oldPassword, newPassword } = req.body;
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Password lama dan baru wajib diisi",
+      });
+    }
+
+    const userRef = usersCollection.doc(userId);
+    const userSnap = await userRef.get();
+
+    if (!userSnap.exists) {
+      return res.status(404).json({
+        success: false,
+        message: "User tidak ditemukan",
+      });
+    }
+
+    const user = userSnap.data();
+
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        message: "Password lama anda salah",
+      });
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+
+    await userRef.update({
+      password: hashed,
+      passwordChangedAt: new Date(),
+    });
+
+    return res.json({
+      success: true,
+      message: "Password berhasil diperbarui",
+    });
+  } catch (error) {
+    console.error("Error", error);
+    return res.status(500).json({
+      success: false,
+      message: "Terjadi kesalahan server!",
+    });
+  }
+};
+
+// export const forgotPassword = async (req, res) => {
+//   try {
+//     const { email } = req.body;
+//     if (!email) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Email wajib diisi",
+//       });
+//     }
+
+//     const snapshot = await db
+//       .collection("users")
+//       .where("email", "==", email)
+//       .limit(1)
+//       .get();
+
+//     // SECURITY: jangan bocorkan apakah email ada
+//     if (snapshot.empty) {
+//       return res.json({
+//         success: true,
+//         message: "Jika email terdaftar, link reset akan dikirim",
+//       });
+//     }
+
+//     const userDoc = snapshot.docs[0];
+//     const userId = userDoc.id;
+
+//     const resetToken = crypto.randomBytes(32).toString("hex");
+//     const tokenHash = crypto
+//       .createHash("sha256")
+//       .update(resetToken)
+//       .digest("hex");
+
+//     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 menit
+
+//     await db.collection("users").doc(userId).update({
+//       passwordReset: {
+//         tokenHash,
+//         expiresAt,
+//       },
+//     });
+
+//     const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+
+//     // TODO: integrate email service
+//     console.log("RESET PASSWORD LINK:", resetLink);
+
+//     return res.json({
+//       success: true,
+//       message: "Jika email terdaftar, link reset akan dikirim",
+//     });
+//   } catch (err) {
+//     return res.status(500).json({
+//       success: false,
+//       message: "Gagal memproses forgot password",
+//     });
+//   }
+// };
+
+// export const resetPassword = async (req, res) => {
+//   try {
+//     const { token, newPassword } = req.body;
+
+//     if (!token || !newPassword) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Token dan password baru wajib diisi",
+//       });
+//     }
+
+//     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+//     const snapshot = await db
+//       .collection("users")
+//       .where("passwordReset.tokenHash", "==", tokenHash)
+//       .limit(1)
+//       .get();
+
+//     if (snapshot.empty) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Token tidak valid atau sudah kadaluarsa",
+//       });
+//     }
+
+//     const userDoc = snapshot.docs[0];
+//     const userData = userDoc.data();
+
+//     if (userData.passwordReset.expiresAt.toDate() < new Date()) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Token reset password telah kadaluarsa",
+//       });
+//     }
+
+//     const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+//     await db.collection("users").doc(userDoc.id).update({
+//       password: hashedPassword,
+//       passwordReset: null,
+//     });
+
+//     return res.json({
+//       success: true,
+//       message: "Password berhasil diperbarui",
+//     });
+//   } catch (err) {
+//     return res.status(500).json({
+//       success: false,
+//       message: "Gagal reset password",
+//     });
+//   }
+// };
