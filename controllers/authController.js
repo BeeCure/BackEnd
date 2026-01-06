@@ -16,7 +16,7 @@ export const register = async (req, res) => {
       });
     }
 
-    const allowedRoles = ["USER", "PRACTITIONER"];
+    const allowedRoles = ["USER", "PRACTITIONER", "SUPER_ADMIN"];
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({
         success: false,
@@ -87,6 +87,13 @@ export const register = async (req, res) => {
       message: isPractitioner
         ? "Registrasi berhasil. Menunggu verifikasi admin."
         : "Registrasi berhasil. Silakan verifikasi email.",
+      data: {
+        ...newUser,
+        createdAt: undefined,
+        password: undefined,
+        verificationToken: undefined,
+        verificationTokenExpiresAt: undefined,
+      },
     });
   } catch (error) {
     console.error("Register error:", error);
@@ -178,6 +185,11 @@ export const login = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Yeeayy! Anda berhasil login",
+      data: {
+        role: user.role,
+        name: user.name,
+        email: user.email,
+      },
     });
   } catch (error) {
     console.error("Error", error);
@@ -286,28 +298,26 @@ export const verifyTokenOTP = async (req, res) => {
     }
 
     const userDoc = snapshot.docs[0];
+    const userRef = usersCollection.doc(userDoc.id);
     const user = userDoc.data();
 
+    // check if email is already verified
     if (user.isEmailVerified) {
       return res.status(400).json({
         success: false,
-        message: "Email sudah diverifikasi",
+        message: "Email sudah terverifikasi",
       });
     }
 
-    // Cek OTP
-    if (user.verificationToken !== otp) {
+    // validate OTP
+    if (
+      user.verificationToken !== otp ||
+      !user.verificationTokenExpiresAt ||
+      user.verificationTokenExpiresAt.toDate() < new Date()
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Kode OTP tidak valid",
-      });
-    }
-
-    // Cek expired
-    if (user.verificationTokenExpiresAt.toDate() < new Date()) {
-      return res.status(400).json({
-        success: false,
-        message: "Kode OTP telah kedaluwarsa",
+        message: "OTP tidak valid atau sudah kedaluwarsa",
       });
     }
 
@@ -319,7 +329,19 @@ export const verifyTokenOTP = async (req, res) => {
       updatedAt: new Date(),
     };
 
-    await usersCollection.doc(userDoc.id).update(updateData);
+    // USER langsung aktif
+    if (user.role === "USER") {
+      updateData.status = "ACTIVE";
+      updateData.approvalStatus = "APPROVED";
+    }
+
+    // PRACTITIONER tetap pending
+    if (user.role === "PRACTITIONER") {
+      updateData.status = "PENDING";
+      updateData.approvalStatus = "PENDING";
+    }
+
+    await userRef.update(updateData);
 
     return res.status(200).json({
       success: true,
