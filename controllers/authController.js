@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { generateTokenSetCookie } from "../utils/generateTokenSetCookie.js";
 import { v4 as uuidv4 } from "uuid";
 import db from "../firestore.js";
+import { sendVerificationOtpEmail } from "../emails/otpEmailService.js";
 
 const usersCollection = db.collection("users");
 
@@ -82,6 +83,18 @@ export const register = async (req, res) => {
     }
 
     await usersCollection.doc(userId).set(newUser);
+
+    // 🔔 KIRIM EMAIL OTP (Resend)
+    try {
+      await sendVerificationOtpEmail(
+        newUser.email,
+        newUser.name,
+        verificationToken
+      );
+    } catch (emailError) {
+      console.error("Failed to send OTP email:", emailError);
+      // Tidak menggagalkan register
+    }
 
     return res.status(201).json({
       success: true,
@@ -361,11 +374,8 @@ export const resendTokenOTP = async (req, res) => {
       updatedAt: new Date(),
     });
 
-    /**
-     * TODO:
-     * Kirim OTP ke email user
-     * sendOtpEmail(email, newOtp)
-     */
+    // Kirim OTP ke email user
+    await sendVerificationOtpEmail(email, user.name, newOtp);
 
     return res.status(200).json({
       success: true,
