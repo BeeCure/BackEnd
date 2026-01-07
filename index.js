@@ -1,10 +1,9 @@
+import "dotenv/config";
 import express from "express";
-import dotenv from "dotenv";
 import authRoutes from "./routes/authRoute.js";
 import adminRoutes from "./routes/adminRoute.js";
 import cookieParser from "cookie-parser";
 
-dotenv.config({ silent: true });
 const app = express();
 const PORT = process.env.PORT || 3000;
 
