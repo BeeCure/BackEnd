@@ -1,0 +1,19 @@
+runtime: nodejs20
+
+instance_class: F1
+
+env_variables:
+  NODE_ENV: "production"
+
+entrypoint: node index.js
+
+automatic_scaling:
+  min_instances: 0
+  max_instances: 1
+  target_cpu_utilization: 0.65
+  target_throughput_utilization: 0.75
+
+handlers:
+  - url: /.*
+    secure: always
+    script: auto
