@@ -2,3 +2,4 @@ node_modules
 .env
 src/services
 firestore-beehive.json
+firebase-admin.json
