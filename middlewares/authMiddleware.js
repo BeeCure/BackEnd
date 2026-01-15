@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import db from "../firestore.js";
+import { db } from "../firestore.js";
 
 const usersCollection = db.collection("users");
 
@@ -26,7 +26,7 @@ export const protect = async (req, res, next) => {
     const userData = userDoc.data();
 
     req.user = {
-      id: userDoc.id,
+      userId: userDoc.id,
       role: userData.role,
       email: userData.email,
       name: userData.name,

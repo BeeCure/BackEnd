@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { generateTokenSetCookie } from "../utils/generateTokenSetCookie.js";
 import { v4 as uuidv4 } from "uuid";
-import db from "../firestore.js";
+import {db} from "../firestore.js";
 import { sendVerificationOtpEmail } from "../emails/otpEmailService.js";
 
 const usersCollection = db.collection("users");

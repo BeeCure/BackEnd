@@ -1,5 +1,4 @@
-import { bucket } from "../config/firebase.js";
-import db from "../firestore.js";
+import { bucket, db } from "../firestore.js";
 
 const usersCollection = db.collection("users");
 
@@ -26,7 +25,13 @@ export const getProfile = async (req, res) => {
         role: userData.role,
         avatarUrl: userData.avatarUrl ?? null,
         address: userData.address ?? null,
-        lastLogin: userData.previousLogin ?? null,
+        lastLogin: userData.previousLogin
+          ? new Intl.DateTimeFormat("id-ID", {
+              dateStyle: "long",
+              timeStyle: "medium",
+              timeZone: "Asia/Jakarta",
+            }).format(userData.previousLogin.toDate())
+          : null,
       },
     });
   } catch (err) {
@@ -62,7 +67,7 @@ export const updateProfile = async (req, res) => {
 
     const updateData = {};
 
-    // ===== TEXT FIELDS =====
+    // ===== TEXT =====
     if (name) {
       if (typeof name !== "string" || name.trim().length < 2) {
         return res.status(400).json({
@@ -78,20 +83,34 @@ export const updateProfile = async (req, res) => {
 
     // ===== AVATAR =====
     if (req.file) {
-      const fileExt = req.file.originalname.split(".").pop();
-      const fileName = `avatars/${userId}.${fileExt}`;
+      // hapus avatar lama (jika ada)
+      await Promise.all([
+        bucket
+          .file(`avatars/${userId}.png`)
+          .delete()
+          .catch(() => {}),
+        bucket
+          .file(`avatars/${userId}.jpg`)
+          .delete()
+          .catch(() => {}),
+        bucket
+          .file(`avatars/${userId}.jpeg`)
+          .delete()
+          .catch(() => {}),
+      ]);
 
-      const file = bucket.file(fileName);
+      const filePath = `avatars/${userId}.png`;
+      const file = bucket.file(filePath);
 
       await file.save(req.file.buffer, {
-        contentType: req.file.mimetype,
-        public: true,
         metadata: {
+          contentType: "image/png",
           cacheControl: "public, max-age=31536000",
         },
+        public: true,
       });
 
-      updateData.avatarUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+      updateData.avatarUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
     }
 
     updateData.updatedAt = new Date();

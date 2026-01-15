@@ -1,4 +1,9 @@
-import db from "../firestore.js";
+import { sendEmail } from "../emails/emailService.js";
+import {
+  practitionerApprovedTemplate,
+  practitionerRejectedTemplate,
+} from "../emails/templates/otpEmailTemplate.js";
+import { db } from "../firestore.js";
 
 const usersCollection = db.collection("users");
 
@@ -49,7 +54,12 @@ export const approvePractitioner = async (req, res) => {
       approvedBy: req.user.id,
     });
 
-    // TODO: kirim email OTP ke practitioner
+    // kirim email OTP ke practitioner
+    await sendEmail({
+      to: user.email,
+      subject: "Akun Practitioner BeeVra Disetujui",
+      html: practitionerApprovedTemplate({ name: user.name }),
+    });
 
     return res.status(200).json({
       success: true,
@@ -108,6 +118,13 @@ export const rejectPractitioner = async (req, res) => {
       rejectedAt: new Date(),
       rejectionReason: reason,
       rejectedBy: req.user.userId,
+    });
+
+    // kirim email penolakan ke practitioner
+    await sendEmail({
+      to: user.email,
+      subject: "Pendaftaran Practitioner BeeVra Ditolak",
+      html: practitionerRejectedTemplate({ name: user.name, reason }),
     });
 
     return res.status(200).json({
