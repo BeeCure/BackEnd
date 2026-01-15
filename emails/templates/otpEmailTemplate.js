@@ -26,7 +26,7 @@ export const otpEmailTemplate = ({ name, otp, title, subtitle }) => {
           font-size:22px;
           letter-spacing:1px;
         ">
-          🐝 BeeHive
+          🐝 BeeVra
         </h1>
       </div>
 
@@ -94,10 +94,146 @@ export const otpEmailTemplate = ({ name, otp, title, subtitle }) => {
         font-size:12px;
         color:#9ca3af;
       ">
-        © ${new Date().getFullYear()} BeeHive. All rights reserved.
+        © ${new Date().getFullYear()} BeeVra. All rights reserved.
       </div>
 
     </div>
   </div>
+  `;
+};
+
+export const practitionerApprovedTemplate = ({ name }) => {
+  return `
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <meta charset="UTF-8" />
+      <title>Akun Practitioner Disetujui</title>
+    </head>
+    <body style="margin:0;padding:0;background:#f4f6f8;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td align="center">
+            <table width="600" style="
+              background:#ffffff;
+              border-radius:10px;
+              padding:30px;
+              font-family:Arial,sans-serif;
+            ">
+              <tr>
+                <td align="center">
+                  <h1 style="color:#2f855a;">🐝 BeeVra</h1>
+
+                  <h2 style="color:#2d3748;">
+                    Akun Practitioner Disetujui
+                  </h2>
+
+                  <p>Halo <strong>${name}</strong>,</p>
+
+                  <p>
+                    Selamat 🎉  
+                    Akun kamu sebagai <strong>Practitioner</strong> telah
+                    <strong style="color:#38a169;">disetujui</strong>.
+                  </p>
+
+                  <div style="
+                    margin:25px 0;
+                    padding:15px;
+                    background:#f0fff4;
+                    border-left:5px solid #38a169;
+                    text-align:left;
+                  ">
+                    Kamu sekarang dapat mengakses seluruh fitur practitioner di BeeVra.
+                  </div>
+
+                  <p>
+                    Silakan login ke aplikasi BeeVra untuk mulai menggunakan layanan.
+                  </p>
+
+                  <p style="font-size:13px;color:#718096;">
+                    Jika kamu merasa tidak melakukan pendaftaran, silakan abaikan email ini.
+                  </p>
+
+                  <hr style="margin:30px 0;border:none;border-top:1px solid #e2e8f0;" />
+
+                  <p style="font-size:12px;color:#a0aec0;">
+                    © ${new Date().getFullYear()} BeeVra. All rights reserved.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+  </html>
+  `;
+};
+
+export const practitionerRejectedTemplate = ({ name, reason }) => {
+  return `
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <meta charset="UTF-8" />
+      <title>Pendaftaran Practitioner Ditolak</title>
+    </head>
+    <body style="margin:0;padding:0;background:#f4f6f8;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td align="center">
+            <table width="600" style="
+              background:#ffffff;
+              border-radius:10px;
+              padding:30px;
+              font-family:Arial,sans-serif;
+            ">
+              <tr>
+                <td align="center">
+                  <h1 style="color:#e53e3e;">🐝 BeeVra</h1>
+
+                  <h2 style="color:#2d3748;">
+                    Pendaftaran Practitioner Ditolak
+                  </h2>
+
+                  <p>Halo <strong>${name}</strong>,</p>
+
+                  <p>
+                    Terima kasih telah mendaftar sebagai <strong>Practitioner</strong> di BeeVra.
+                  </p>
+
+                  <div style="
+                    margin:25px 0;
+                    padding:15px;
+                    background:#fff5f5;
+                    border-left:5px solid #e53e3e;
+                    text-align:left;
+                  ">
+                    <strong>Alasan penolakan:</strong>
+                    <br />
+                    ${reason}
+                  </div>
+
+                  <p>
+                    Kamu dapat mendaftar kembali di kemudian hari setelah memenuhi persyaratan.
+                  </p>
+
+                  <p style="font-size:13px;color:#718096;">
+                    Jika kamu merasa ini adalah kesalahan, silakan hubungi tim BeeVra.
+                  </p>
+
+                  <hr style="margin:30px 0;border:none;border-top:1px solid #e2e8f0;" />
+
+                  <p style="font-size:12px;color:#a0aec0;">
+                    © ${new Date().getFullYear()} BeeVra. All rights reserved.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+  </html>
   `;
 };
