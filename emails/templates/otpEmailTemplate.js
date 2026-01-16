@@ -72,7 +72,7 @@ export const otpEmailTemplate = ({ name, otp, title, subtitle }) => {
           font-size:13px;
           text-align:center;
         ">
-          Kode ini berlaku selama <strong>10 menit</strong>.
+          Kode ini berlaku selama <strong>5 menit</strong>.
         </p>
 
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:30px 0;" />
