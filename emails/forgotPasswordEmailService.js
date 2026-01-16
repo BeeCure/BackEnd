@@ -1,15 +1,15 @@
 import { sendEmail } from "./emailService.js";
 import { forgotPasswordEmailTemplate } from "./templates/forgotPasswordEmailTemplate.js";
 
-export const sendForgotPasswordEmail = async (email, name, otp) => {
+export const sendForgotPasswordEmail = async ({ email, name, resetLink }) => {
   const html = forgotPasswordEmailTemplate({
     name,
-    otp,
+    resetLink,
   });
 
   await sendEmail({
     to: email,
-    subject: "Reset Password BeeHive",
+    subject: "Reset Password BeeVra",
     html,
   });
 };

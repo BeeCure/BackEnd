@@ -1,10 +1,12 @@
 import express from "express";
 import {
   changePassword,
+  forgotPassword,
   login,
   logout,
   register,
   resendTokenOTP,
+  resetPassword,
   verifyTokenOTP,
 } from "../controllers/authController.js";
 import { protect } from "../middlewares/authMiddleware.js";
@@ -21,6 +23,8 @@ router.post(
   logout
 );
 router.post("/change-password", protect, changePassword);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 router.post("/verify-token-otp", verifyTokenOTP);
 router.post("/resend-token-otp", resendTokenOTP);
 
