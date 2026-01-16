@@ -67,7 +67,6 @@ export const updateProfile = async (req, res) => {
 
     const updateData = {};
 
-    // ===== TEXT =====
     if (name) {
       if (typeof name !== "string" || name.trim().length < 2) {
         return res.status(400).json({
@@ -81,7 +80,6 @@ export const updateProfile = async (req, res) => {
     if (phone) updateData.phone = phone;
     if (address) updateData.address = address;
 
-    // ===== AVATAR =====
     if (req.file) {
       // hapus avatar lama (jika ada)
       await Promise.all([

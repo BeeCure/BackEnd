@@ -2,8 +2,9 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { generateTokenSetCookie } from "../utils/generateTokenSetCookie.js";
 import { v4 as uuidv4 } from "uuid";
-import {db} from "../firestore.js";
+import { db } from "../firestore.js";
 import { sendVerificationOtpEmail } from "../emails/otpEmailService.js";
+import { sendForgotPasswordEmail } from "../emails/forgotPasswordEmailService.js";
 
 const usersCollection = db.collection("users");
 
@@ -68,7 +69,7 @@ export const register = async (req, res) => {
 
       // OTP
       verificationToken,
-      verificationTokenExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      verificationTokenExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
 
       // METADATA
       createdAt: new Date(),
@@ -370,7 +371,7 @@ export const resendTokenOTP = async (req, res) => {
 
     await usersCollection.doc(userDoc.id).update({
       verificationToken: newOtp,
-      verificationTokenExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      verificationTokenExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
       updatedAt: new Date(),
     });
 
@@ -442,116 +443,131 @@ export const changePassword = async (req, res) => {
   }
 };
 
-// export const forgotPassword = async (req, res) => {
-//   try {
-//     const { email } = req.body;
-//     if (!email) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Email wajib diisi",
-//       });
-//     }
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
 
-//     const snapshot = await db
-//       .collection("users")
-//       .where("email", "==", email)
-//       .limit(1)
-//       .get();
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email wajib diisi",
+      });
+    }
 
-//     // SECURITY: jangan bocorkan apakah email ada
-//     if (snapshot.empty) {
-//       return res.json({
-//         success: true,
-//         message: "Jika email terdaftar, link reset akan dikirim",
-//       });
-//     }
+    // ✅ QUERY HARUS DARI COLLECTION
+    const snapshot = await usersCollection
+      .where("email", "==", email)
+      .limit(1)
+      .get();
 
-//     const userDoc = snapshot.docs[0];
-//     const userId = userDoc.id;
+    // SECURITY: jangan bocorkan apakah email ada
+    if (snapshot.empty) {
+      return res.json({
+        success: true,
+        message: "Jika email terdaftar, link reset akan dikirim",
+      });
+    }
 
-//     const resetToken = crypto.randomBytes(32).toString("hex");
-//     const tokenHash = crypto
-//       .createHash("sha256")
-//       .update(resetToken)
-//       .digest("hex");
+    const userDoc = snapshot.docs[0];
+    const userData = userDoc.data();
 
-//     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 menit
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
 
-//     await db.collection("users").doc(userId).update({
-//       passwordReset: {
-//         tokenHash,
-//         expiresAt,
-//       },
-//     });
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-//     const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+    // ✅ UPDATE KE USER YANG BENAR
+    await usersCollection.doc(userDoc.id).update({
+      passwordReset: {
+        tokenHash,
+        expiresAt,
+      },
+    });
 
-//     // TODO: integrate email service
-//     console.log("RESET PASSWORD LINK:", resetLink);
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
 
-//     return res.json({
-//       success: true,
-//       message: "Jika email terdaftar, link reset akan dikirim",
-//     });
-//   } catch (err) {
-//     return res.status(500).json({
-//       success: false,
-//       message: "Gagal memproses forgot password",
-//     });
-//   }
-// };
+    // ✅ EMAIL SERVICE (LINK BASED)
+    await sendForgotPasswordEmail({
+      email: userData.email,
+      name: userData.name,
+      resetLink,
+    });
 
-// export const resetPassword = async (req, res) => {
-//   try {
-//     const { token, newPassword } = req.body;
+    return res.json({
+      success: true,
+      message: "Jika email terdaftar, link reset akan dikirim",
+      // data: resetLink,
+    });
+  } catch (err) {
+    console.error("Forgot password error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Gagal memproses forgot password",
+    });
+  }
+};
 
-//     if (!token || !newPassword) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Token dan password baru wajib diisi",
-//       });
-//     }
+export const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
 
-//     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    if (!token || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Token dan password baru wajib diisi",
+      });
+    }
 
-//     const snapshot = await db
-//       .collection("users")
-//       .where("passwordReset.tokenHash", "==", tokenHash)
-//       .limit(1)
-//       .get();
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
-//     if (snapshot.empty) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Token tidak valid atau sudah kadaluarsa",
-//       });
-//     }
+    const snapshot = await db
+      .collection("users")
+      .where("passwordReset.tokenHash", "==", tokenHash)
+      .limit(1)
+      .get();
 
-//     const userDoc = snapshot.docs[0];
-//     const userData = userDoc.data();
+    if (snapshot.empty) {
+      return res.status(400).json({
+        success: false,
+        message: "Token tidak valid atau sudah kadaluarsa",
+      });
+    }
 
-//     if (userData.passwordReset.expiresAt.toDate() < new Date()) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Token reset password telah kadaluarsa",
-//       });
-//     }
+    const userDoc = snapshot.docs[0];
+    const userData = userDoc.data();
 
-//     const hashedPassword = await bcrypt.hash(newPassword, 12);
+    if (userData.passwordReset.expiresAt.toDate() < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: "Token reset password telah kadaluarsa",
+      });
+    }
 
-//     await db.collection("users").doc(userDoc.id).update({
-//       password: hashedPassword,
-//       passwordReset: null,
-//     });
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "Password minimal 8 karakter",
+      });
+    }
 
-//     return res.json({
-//       success: true,
-//       message: "Password berhasil diperbarui",
-//     });
-//   } catch (err) {
-//     return res.status(500).json({
-//       success: false,
-//       message: "Gagal reset password",
-//     });
-//   }
-// };
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await db.collection("users").doc(userDoc.id).update({
+      password: hashedPassword,
+      passwordReset: null,
+    });
+
+    return res.json({
+      success: true,
+      message: "Password berhasil diperbarui",
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "Gagal reset password",
+    });
+  }
+};
