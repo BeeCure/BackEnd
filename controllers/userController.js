@@ -132,15 +132,14 @@ export const updateProfile = async (req, res) => {
 
 export const getAllUsers = async (req, res) => {
   try {
-    // 🔐 ROLE GUARD
-    if (req.user.role !== "ADMIN") {
+    if (req.user.role !== "SUPER_ADMIN") {
       return res.status(403).json({
         success: false,
-        message: "Akses ditolak",
+        message: "Akses ditolak: role tidak diizinkan!!",
       });
     }
 
-    let query = usersCollection.where();
+    let query = usersCollection.where("role", "in", ["USER", "PRACTITIONER"]);
 
     const { role, status, approvalStatus } = req.query;
 
@@ -159,20 +158,23 @@ export const getAllUsers = async (req, res) => {
     const snapshot = await query.get();
 
     const users = snapshot.docs.map((doc) => {
-      const data = doc.data();
+      const userData = doc.data();
 
       return {
         id: doc.id,
-        name: data.name ?? null,
-        email: data.email ?? null,
-        phone: data.phone ?? null,
-        role: data.role ?? null,
-        avatarUrl: data.avatarUrl ?? null,
-        status: data.status ?? null,
-        approvalStatus: data.approvalStatus ?? null,
-        isEmailVerified: data.isEmailVerified ?? false,
-        createdAt: data.createdAt ?? null,
-        updatedAt: data.updatedAt ?? null,
+        name: userData.name ?? null,
+        email: userData.email ?? null,
+        phone: userData.phone ?? null,
+        role: userData.role ?? null,
+        avatarUrl: userData.avatarUrl ?? null,
+        status: userData.status ?? null,
+        approvalStatus: userData.approvalStatus ?? null,
+        isEmailVerified: userData.isEmailVerified ?? false,
+        createdAt: userData.createdAt ?? null,
+        updatedAt: userData.updatedAt ?? null,
+        approvedAt: userData.approvedAt ?? null,
+        rejectedAt: userData.rejectedAt ?? null,
+        rejectedReason: userData.rejectedReason ?? null,
       };
     });
 
@@ -214,19 +216,22 @@ export const getAllPractitioners = async (req, res) => {
     const snapshot = await query.get();
 
     const practitioners = snapshot.docs.map((doc) => {
-      const data = doc.data();
+      const userData = doc.data();
 
       return {
         id: doc.id,
-        name: data.name ?? null,
-        email: data.email ?? null,
-        phone: data.phone ?? null,
-        avatarUrl: data.avatarUrl ?? null,
-        status: data.status ?? null,
-        approvalStatus: data.approvalStatus ?? null,
-        isEmailVerified: data.isEmailVerified ?? false,
-        createdAt: data.createdAt ?? null,
-        updatedAt: data.updatedAt ?? null,
+        name: userData.name ?? null,
+        email: userData.email ?? null,
+        phone: userData.phone ?? null,
+        avatarUrl: userData.avatarUrl ?? null,
+        status: userData.status ?? null,
+        approvalStatus: userData.approvalStatus ?? null,
+        isEmailVerified: userData.isEmailVerified ?? false,
+        createdAt: userData.createdAt ?? null,
+        updatedAt: userData.updatedAt ?? null,
+        approvedAt: userData.approvedAt ?? null,
+        rejectedAt: userData.rejectedAt ?? null,
+        rejectedReason: userData.rejectedReason ?? null,
       };
     });
 
