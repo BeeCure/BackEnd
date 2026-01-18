@@ -17,7 +17,7 @@ const router = express.Router();
 router.post("/login", login);
 router.post("/register", register);
 router.post(
-  "/logout/:userId",
+  "/logout",
   protect,
   authorizeRoles("USER", "PRACTITIONER", "SUPER_ADMIN"),
   logout
