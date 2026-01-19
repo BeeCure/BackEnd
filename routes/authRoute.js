@@ -4,6 +4,7 @@ import {
   forgotPassword,
   login,
   logout,
+  reapplyPractitionerByToken,
   register,
   resendTokenOTP,
   resetPassword,
@@ -20,8 +21,9 @@ router.post(
   "/logout",
   protect,
   authorizeRoles("USER", "PRACTITIONER", "SUPER_ADMIN"),
-  logout
+  logout,
 );
+router.post("/reapply", reapplyPractitionerByToken);
 router.post("/change-password", protect, changePassword);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
