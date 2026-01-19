@@ -156,83 +156,83 @@ export const rejectPractitioner = async (req, res) => {
   }
 };
 
-// export const reapplyPractitionerByToken = async (req, res) => {
-//   try {
-//     const { token, role, facebookUrl } = req.body;
+export const reapplyPractitionerByToken = async (req, res) => {
+  try {
+    const { token, role, facebookUrl } = req.body;
 
-//     if (!token) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Token tidak ditemukan",
-//       });
-//     }
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: "Token tidak ditemukan",
+      });
+    }
 
-//     if (role !== "PRACTITIONER") {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Role harus PRACTITIONER",
-//       });
-//     }
+    if (role !== "PRACTITIONER") {
+      return res.status(400).json({
+        success: false,
+        message: "Role harus PRACTITIONER",
+      });
+    }
 
-//     if (!facebookUrl) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "facebookUrl wajib diisi",
-//       });
-//     }
+    if (!facebookUrl) {
+      return res.status(400).json({
+        success: false,
+        message: "facebookUrl wajib diisi",
+      });
+    }
 
-//     const snapshot = await usersCollection
-//       .where("reapplyToken", "==", token)
-//       .limit(1)
-//       .get();
+    const snapshot = await usersCollection
+      .where("reapplyToken", "==", token)
+      .limit(1)
+      .get();
 
-//     if (snapshot.empty) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Token tidak valid",
-//       });
-//     }
+    if (snapshot.empty) {
+      return res.status(400).json({
+        success: false,
+        message: "Token tidak valid",
+      });
+    }
 
-//     const userDoc = snapshot.docs[0];
-//     const user = userDoc.data();
+    const userDoc = snapshot.docs[0];
+    const user = userDoc.data();
 
-//     if (user.approvalStatus !== "REJECTED") {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Akun tidak dalam status ditolak",
-//       });
-//     }
+    if (user.approvalStatus !== "REJECTED") {
+      return res.status(400).json({
+        success: false,
+        message: "Akun tidak dalam status ditolak",
+      });
+    }
 
-//     if (user.reapplyTokenExpiredAt.toDate() < new Date()) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Token telah kedaluwarsa",
-//       });
-//     }
+    if (user.reapplyTokenExpiredAt.toDate() < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: "Token telah kedaluwarsa",
+      });
+    }
 
-//     await userDoc.ref.update({
-//       approvalStatus: "PENDING",
-//       facebookUrl,
+    await userDoc.ref.update({
+      approvalStatus: "PENDING",
+      facebookUrl,
 
-//       reapplyToken: admin.firestore.FieldValue.delete(),
-//       reapplyTokenExpiredAt: admin.firestore.FieldValue.delete(),
+      reapplyToken: admin.firestore.FieldValue.delete(),
+      reapplyTokenExpiredAt: admin.firestore.FieldValue.delete(),
 
-//       reappliedAt: new Date(),
-//       updatedAt: new Date(),
-//     });
+      reappliedAt: new Date(),
+      updatedAt: new Date(),
+    });
 
-//     return res.status(200).json({
-//       success: true,
-//       message: "Pengajuan ulang practitioner berhasil dikirim",
-//     });
-//   } catch (error) {
-//     console.error("Reapply via token error:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Server internal sedang bermasalah",
-//     });
-//   }
-// };
+    return res.status(200).json({
+      success: true,
+      message: "Pengajuan ulang practitioner berhasil dikirim",
+    });
+  } catch (error) {
+    console.error("Reapply via token error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server internal sedang bermasalah",
+    });
+  }
+};
 
 // export const rejectPractitioner = async (req, res) => {
 //   try {
