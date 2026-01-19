@@ -126,7 +126,7 @@ export const rejectPractitioner = async (req, res) => {
       approvalStatus: "REJECTED",
       rejectionReason: reason,
       rejectedAt: new Date(),
-      rejectedBy: req.user.id,
+      rejectedBy: req.user.userId,
       reapplyToken,
       reapplyTokenExpiredAt: expiredAt,
       updatedAt: new Date(),

@@ -2,31 +2,32 @@ import admin from "firebase-admin";
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 
-// 🔹 Firestore (Project A)
+// Service Accounts
 const firestoreSA = require("./firestore-beehive.json");
-
-// 🔹 Storage (Project B)
 const storageSA = require("./firebase-admin.json");
 
-// App Firestore
-const firestoreApp = admin.initializeApp(
-  {
-    credential: admin.credential.cert(firestoreSA),
-  },
-  "firestoreApp"
-);
+const firestoreApp =
+  admin.apps.find((app) => app.name === "firestoreApp") ??
+  admin.initializeApp(
+    {
+      credential: admin.credential.cert(firestoreSA),
+    },
+    "firestoreApp",
+  );
 
-// App Storage
-const storageApp = admin.initializeApp(
-  {
-    credential: admin.credential.cert(storageSA),
-    storageBucket: "beevraapp.firebasestorage.app",
-  },
-  "storageApp"
-);
+const storageApp =
+  admin.apps.find((app) => app.name === "storageApp") ??
+  admin.initializeApp(
+    {
+      credential: admin.credential.cert(storageSA),
+      storageBucket: "beevraapp.firebasestorage.app",
+    },
+    "storageApp",
+  );
 
 export const db = firestoreApp.firestore();
 export const bucket = storageApp.storage().bucket();
+export { admin };
 
 // import admin from "firebase-admin";
 // import { createRequire } from "module";

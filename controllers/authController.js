@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { generateTokenSetCookie } from "../utils/generateTokenSetCookie.js";
 import { v4 as uuidv4 } from "uuid";
-import { db } from "../firestore.js";
+import { db, admin } from "../firestore.js";
 import { sendVerificationOtpEmail } from "../emails/otpEmailService.js";
 import { sendForgotPasswordEmail } from "../emails/forgotPasswordEmailService.js";
 
@@ -48,7 +48,7 @@ export const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const verificationToken = Math.floor(
-      100000 + Math.random() * 900000
+      100000 + Math.random() * 900000,
     ).toString();
 
     const userId = uuidv4();
@@ -90,10 +90,10 @@ export const register = async (req, res) => {
       await sendVerificationOtpEmail(
         newUser.email,
         newUser.name,
-        verificationToken
+        verificationToken,
       );
     } catch (emailError) {
-      console.error("Failed to send OTP email:", emailError);
+      console.error("Gagal mengirim email OTP:", emailError);
       // Tidak menggagalkan register
     }
 
@@ -583,17 +583,18 @@ export const reapplyPractitionerByToken = async (req, res) => {
       });
     }
 
-    if (role !== "PRACTITIONER") {
+    if (!["PRACTITIONER", "USER"].includes(role)) {
       return res.status(400).json({
         success: false,
-        message: "Role harus PRACTITIONER",
+        message: "Role harus USER atau PRACTITIONER",
       });
     }
 
-    if (!facebookUrl) {
+    // validasi facebookUrl hanya jika PRACTITIONER
+    if (role === "PRACTITIONER" && !facebookUrl) {
       return res.status(400).json({
         success: false,
-        message: "facebookUrl wajib diisi",
+        message: "facebookUrl wajib diisi untuk practitioner",
       });
     }
 
@@ -619,27 +620,48 @@ export const reapplyPractitionerByToken = async (req, res) => {
       });
     }
 
-    if (user.reapplyTokenExpiredAt.toDate() < new Date()) {
+    if (
+      !user.reapplyTokenExpiredAt ||
+      user.reapplyTokenExpiredAt.toDate() < new Date()
+    ) {
       return res.status(400).json({
         success: false,
         message: "Token telah kedaluwarsa",
       });
     }
 
-    await userDoc.ref.update({
-      approvalStatus: "PENDING",
-      facebookUrl,
-
+    const updateData = {
+      role,
+      updatedAt: new Date(),
       reapplyToken: admin.firestore.FieldValue.delete(),
       reapplyTokenExpiredAt: admin.firestore.FieldValue.delete(),
-
+      rejectionReason: admin.firestore.FieldValue.delete(),
+      rejectedAt: admin.firestore.FieldValue.delete(),
+      rejectedBy: admin.firestore.FieldValue.delete(),
       reappliedAt: new Date(),
-      updatedAt: new Date(),
-    });
+    };
+
+    if (role === "PRACTITIONER") {
+      updateData.facebookUrl = facebookUrl;
+      updateData.approvalStatus = "PENDING";
+      updateData.status = "INACTIVE"; // tunggu approval
+    }
+
+    // ===== DOWNGRADE KE USER =====
+    if (role === "USER") {
+      updateData.approvalStatus = "APPROVED";
+      updateData.status = "ACTIVE";
+      updateData.facebookUrl = admin.firestore.FieldValue.delete();
+    }
+
+    await userDoc.ref.update(updateData);
 
     return res.status(200).json({
       success: true,
-      message: "Pengajuan ulang practitioner berhasil dikirim",
+      message:
+        role === "PRACTITIONER"
+          ? "Pengajuan ulang practitioner berhasil dikirim"
+          : "Akun berhasil dialihkan menjadi USER",
     });
   } catch (error) {
     console.error("Reapply via token error:", error);
