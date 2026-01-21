@@ -24,7 +24,7 @@ const fileFilter = (req, file, cb) => {
   cb(null, true);
 };
 
-export const uploadAvatar = multer({
+export const upload = multer({
   storage,
   fileFilter,
   limits: {
