@@ -52,7 +52,7 @@ export const approvePractitioner = async (req, res) => {
       status: "ACTIVE",
       approvalStatus: "APPROVED",
       approvedAt: new Date(),
-      approvedBy: req.user.id,
+      approvedBy: req.user.userId,
     });
 
     // kirim email OTP ke practitioner
