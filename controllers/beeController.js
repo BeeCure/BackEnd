@@ -15,8 +15,55 @@ export const createSpecies = async (req, res) => {
       });
     }
 
+    // ===== VALIDASI GAMBAR =====
+    const requiredImages = [
+      "bodyShape",
+      "wingShape",
+      "entranceShape",
+      "honeyPouchShape",
+    ];
+
+    for (const field of requiredImages) {
+      if (!req.files?.[field]) {
+        return res.status(400).json({
+          success: false,
+          message: `Gambar ${field} wajib diunggah`,
+        });
+      }
+    }
+
     const docRef = beeCollection.doc();
 
+    // ===== UPLOAD KE STORAGE =====
+    const uploadImage = async (file, filename) => {
+      const filePath = `species/${docRef.id}/${filename}`;
+      const storageFile = bucket.file(filePath);
+
+      await storageFile.save(file.buffer, {
+        metadata: {
+          contentType: file.mimetype,
+          cacheControl: "public, max-age=31536000",
+        },
+        public: true,
+      });
+
+      return `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+    };
+
+    const images = {
+      bodyShape: await uploadImage(req.files.bodyShape[0], "body.png"),
+      wingShape: await uploadImage(req.files.wingShape[0], "wing.png"),
+      entranceShape: await uploadImage(
+        req.files.entranceShape[0],
+        "entrance.png",
+      ),
+      honeyPouchShape: await uploadImage(
+        req.files.honeyPouchShape[0],
+        "honey_pouch.png",
+      ),
+    };
+
+    // ===== FIRESTORE DATA =====
     const data = {
       name,
       localName: localName ?? null,
@@ -24,35 +71,26 @@ export const createSpecies = async (req, res) => {
       description: description ?? null,
       habitat: habitat ?? null,
       behavior: behavior ?? null,
+
+      images,
+
       nameLowercase: name.toLowerCase(),
       status: "ACTIVE",
+
       createdBy: req.user.id,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     };
-
-    // ===== IMAGE =====
-    if (req.file) {
-      const filePath = `species/${docRef.id}.png`;
-      const file = bucket.file(filePath);
-
-      await file.save(req.file.buffer, {
-        metadata: {
-          contentType: "image/png",
-          cacheControl: "public, max-age=31536000",
-        },
-        public: true,
-      });
-
-      data.imageUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
-    }
 
     await docRef.set(data);
 
     return res.status(201).json({
       success: true,
       message: "Spesies lebah berhasil ditambahkan",
-      data: { id: docRef.id, ...data },
+      data: {
+        id: docRef.id,
+        ...data,
+      },
     });
   } catch (error) {
     console.error("Create species error:", error);
