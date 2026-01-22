@@ -2,6 +2,7 @@ import express from "express";
 import {
   getAllPractitioners,
   getAllUsers,
+  getPractitionerById,
   getProfile,
   updateProfile,
 } from "../controllers/userController.js";
@@ -18,6 +19,11 @@ router.get(
   "/practitioners",
   authorizeRoles("SUPER_ADMIN"),
   getAllPractitioners,
+);
+router.get(
+  "/practitioner/:userId",
+  authorizeRoles("SUPER_ADMIN"),
+  getPractitionerById,
 );
 router.get(
   "/profile",

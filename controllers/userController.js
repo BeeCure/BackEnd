@@ -223,6 +223,7 @@ export const getAllPractitioners = async (req, res) => {
         name: userData.name ?? null,
         email: userData.email ?? null,
         phone: userData.phone ?? null,
+        facebookUrl: userData.facebookUrl ?? null,
         avatarUrl: userData.avatarUrl ?? null,
         status: userData.status ?? null,
         approvalStatus: userData.approvalStatus ?? null,
@@ -244,7 +245,57 @@ export const getAllPractitioners = async (req, res) => {
     console.error("Get all practitioners error:", error);
     return res.status(500).json({
       success: false,
-      message: "Gagal mengambil data practitioner",
+      message: "Gagal mengambil data praktisi",
+    });
+  }
+};
+
+export const getPractitionerById = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const docRef = usersCollection.doc(userId);
+    const docSnap = await docRef.get();
+
+    if (!docSnap.exists) {
+      return res.status(404).json({
+        success: false,
+        message: "Praktisi tidak ditemukan",
+      });
+    }
+
+    const userData = docSnap.data();
+
+    if (userData.role !== "PRACTITIONER") {
+      return res.status(400).json({
+        success: false,
+        message: "User bukan praktisi",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        id: docSnap.userId,
+        name: userData.name ?? null,
+        email: userData.email ?? null,
+        phone: userData.phone ?? null,
+        facebookUrl: userData.facebookUrl ?? null,
+        avatarUrl: userData.avatarUrl ?? null,
+        status: userData.status ?? null,
+        approvalStatus: userData.approvalStatus ?? null,
+        isEmailVerified: userData.isEmailVerified ?? false,
+        createdAt: userData.createdAt ?? null,
+        updatedAt: userData.updatedAt ?? null,
+        approvedAt: userData.approvedAt ?? null,
+        rejectedAt: userData.rejectedAt ?? null,
+        rejectedReason: userData.rejectedReason ?? null,
+      },
+    });
+  } catch (error) {
+    console.error("Get practitioner error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Gagal mengambil data praktisi",
     });
   }
 };
