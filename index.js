@@ -3,6 +3,7 @@ import express from "express";
 import authRoutes from "./routes/authRoute.js";
 import adminRoutes from "./routes/adminRoute.js";
 import userRoutes from "./routes/userRoute.js";
+import beeRoutes from "./routes/beeRoute.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 
@@ -18,13 +19,14 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
-  })
+  }),
 );
 
 // Endpoint
 app.use("/api/auth", authRoutes);
 app.use("/api/admin/practitioners", adminRoutes);
 app.use("/api/user", userRoutes);
+app.use("/api/bee", beeRoutes);
 
 // Test
 app.get("/", (req, res) => {

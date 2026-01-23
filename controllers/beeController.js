@@ -2,6 +2,8 @@ import { sendEmail } from "../emails/emailService.js";
 import { speciesUpdatedTemplate } from "../emails/templates/speciesUpdateTemplate.js";
 import { db, bucket } from "../firestore.js";
 import { Timestamp } from "firebase-admin/firestore";
+import { generateSearchKeywords } from "../utils/generateSearchKeyword.js";
+import { generateChangeLog } from "../utils/generateChangeLog.js";
 
 const beeCollection = db.collection("bee_species");
 
@@ -73,24 +75,26 @@ export const createSpecies = async (req, res) => {
     };
 
     const images = {
-      bodyShape: await uploadImage(req.files.bodyShape[0], "body.png"),
-      wingShape: await uploadImage(req.files.wingShape[0], "wing.png"),
-      entranceShape: await uploadImage(
-        req.files.entranceShape[0],
-        "entrance.png",
-      ),
+      bodyShape: await uploadImage(req.files.bodyShape[0], "body"),
+      wingShape: await uploadImage(req.files.wingShape[0], "wing"),
+      entranceShape: await uploadImage(req.files.entranceShape[0], "entrance"),
       honeyPouchShape: await uploadImage(
         req.files.honeyPouchShape[0],
-        "honey_pouch.png",
+        "honey_pouch",
       ),
     };
 
-    // ===== FIRESTORE DATA =====
+    const searchKeywords = [
+      ...generateSearchKeywords(name),
+      ...generateSearchKeywords(scientificName),
+      ...generateSearchKeywords(genus),
+    ];
+
     const data = {
       name,
       nameLowercase: name.toLowerCase(),
       scientificName,
-      genus,
+      genus: genus ?? null,
       subGenus: subGenus ?? null,
       discoverer: discoverer ?? null,
       discoveredYear: discoveredYear ? Number(discoveredYear) : null,
@@ -99,10 +103,9 @@ export const createSpecies = async (req, res) => {
       images,
 
       status: "ACTIVE",
-      createdBy: req.user.id,
+      createdBy: req.user.userId,
       createdByName: req.user.name,
       createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
     };
 
     await docRef.set(data);
@@ -120,6 +123,73 @@ export const createSpecies = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Gagal menambahkan spesies lebah",
+    });
+  }
+};
+
+export const getSpeciesList = async (req, res) => {
+  try {
+    const { search = "", status = "ACTIVE", limit = 10 } = req.query;
+
+    let query = beeCollection.where("status", "==", status);
+
+    if (search) {
+      query = query.where(
+        "searchKeywords",
+        "array-contains",
+        search.toLowerCase(),
+      );
+    }
+
+    const snap = await query.limit(Number(limit)).get();
+
+    const data = snap.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    return res.status(200).json({
+      success: true,
+      total: data.length,
+      data,
+    });
+  } catch (error) {
+    console.error("Get species list error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Gagal mengambil data spesies lebah",
+    });
+  }
+};
+
+export const getSpeciesDetail = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const docRef = beeCollection.doc(id);
+    const docSnap = await docRef.get();
+
+    if (!docSnap.exists) {
+      return res.status(404).json({
+        success: false,
+        message: "Spesies lebah tidak ditemukan",
+      });
+    }
+
+    const data = docSnap.data();
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        id: docSnap.id,
+        ...data,
+      },
+    });
+  } catch (error) {
+    console.error("Get species detail error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Gagal mengambil detail spesies lebah",
     });
   }
 };
@@ -159,20 +229,17 @@ export const updateSpecies = async (req, res) => {
       }
     }
 
-    if (updateData.name) {
-      updateData.nameLowercase = updateData.name.toLowerCase();
-    }
+    const name = updateData.name ?? oldData.name;
+    const scientificName = updateData.scientificName ?? oldData.scientificName;
+    const genus = updateData.genus ?? oldData.genus;
+    const subGenus = updateData.subGenus ?? oldData.subGenus;
 
-    if (
-      updateData.discoveredYear &&
-      (!Number.isInteger(Number(updateData.discoveredYear)) ||
-        updateData.discoveredYear > new Date().getFullYear())
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Tahun ditemukan tidak valid",
-      });
-    }
+    updateData.searchKeywords = generateSearchKeywords({
+      name,
+      scientificName,
+      genus,
+      subGenus,
+    });
 
     // ===== IMAGE UPDATE =====
     if (req.files) {
@@ -216,14 +283,18 @@ export const updateSpecies = async (req, res) => {
       });
     }
 
+    // ===== TIMESTAMP =====
     updateData.updatedAt = Timestamp.now();
 
     // ===== CHANGE LOG =====
-    const changes = generateChangeLog(oldData, updateData);
+    const changes = generateChangeLog(oldData, updateData, ["searchKeywords"]);
 
+    // ===== UPDATE FIRESTORE =====
     await docRef.update(updateData);
 
-    // ===== EMAIL SUPER ADMIN =====
+    // ===== SEND EMAIL TO SUPER ADMIN =====
+    const updatedAtDate = updateData.updatedAt?.toDate?.() ?? new Date();
+
     await sendEmail({
       to: process.env.SUPER_ADMIN_EMAIL,
       subject: "Perubahan Data Spesies Lebah",
@@ -233,13 +304,14 @@ export const updateSpecies = async (req, res) => {
         editorEmail: req.user.email,
         speciesName: oldData.name,
         changes,
-        updatedAt: new Date().toLocaleString("id-ID"),
+        updatedAt: updatedAtDate.toLocaleString("id-ID"),
       }),
     });
 
     return res.status(200).json({
       success: true,
       message: "Data lebah berhasil diperbarui",
+      data: updateData,
     });
   } catch (error) {
     console.error("Update species error:", error);
@@ -250,80 +322,18 @@ export const updateSpecies = async (req, res) => {
   }
 };
 
-// export const deleteSpecies = async (req, res) => {
-//   try {
-//     await speciesCollection.doc(req.params.id).update({
-//       status: "DELETED",
-//       updatedAt: Timestamp.now(),
-//     });
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "Spesies berhasil dihapus",
-//     });
-//   } catch (error) {
-//     return res.status(500).json({
-//       success: false,
-//       message: "Gagal menghapus spesies",
-//     });
-//   }
-// };
-
-export const getSpeciesList = async (req, res) => {
+export const deleteSpecies = async (req, res) => {
   try {
-    const { search = "", status = "ACTIVE", page = 1, limit = 10 } = req.query;
-
-    const pageNum = Number(page);
-    const limitNum = Number(limit);
-    const offset = (pageNum - 1) * limitNum;
-
-    let query = beeCollection
-      .where("status", "==", status)
-      .orderBy("nameLowercase");
-
-    // ===== SEARCH =====
-    if (search) {
-      const keyword = search.toLowerCase();
-      query = query.startAt(keyword).endAt(keyword + "\uf8ff");
+    // ===== ROLE CHECK =====
+    if (req.user.role !== "SUPER_ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "Hanya SUPER_ADMIN yang dapat menghapus spesies",
+      });
     }
 
-    // ===== PAGINATION (Firestore way) =====
-    if (offset > 0) {
-      const snapshot = await query.limit(offset).get();
-      const lastDoc = snapshot.docs[snapshot.docs.length - 1];
-      if (lastDoc) {
-        query = query.startAfter(lastDoc);
-      }
-    }
-
-    const dataSnap = await query.limit(limitNum).get();
-
-    const data = dataSnap.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-
-    return res.status(200).json({
-      success: true,
-      meta: {
-        page: pageNum,
-        limit: limitNum,
-        total: data.length,
-      },
-      data,
-    });
-  } catch (error) {
-    console.error("Get species list error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Gagal mengambil data spesies lebah",
-    });
-  }
-};
-
-export const getSpeciesDetail = async (req, res) => {
-  try {
     const { id } = req.params;
+    const { reason } = req.body;
 
     const docRef = beeCollection.doc(id);
     const docSnap = await docRef.get();
@@ -335,20 +345,32 @@ export const getSpeciesDetail = async (req, res) => {
       });
     }
 
-    const data = docSnap.data();
+    const species = docSnap.data();
+
+    if (species.status === "INACTIVE") {
+      return res.status(400).json({
+        success: false,
+        message: "Spesies sudah dinonaktifkan",
+      });
+    }
+
+    await docRef.update({
+      status: "INACTIVE",
+      deletedAt: Timestamp.now(),
+      deletedBy: req.user.userId,
+      deleteReason: reason ?? null,
+      updatedAt: Timestamp.now(),
+    });
 
     return res.status(200).json({
       success: true,
-      data: {
-        id: docSnap.id,
-        ...data,
-      },
+      message: "Spesies lebah berhasil dinonaktifkan",
     });
   } catch (error) {
-    console.error("Get species detail error:", error);
+    console.error("Delete species error:", error);
     return res.status(500).json({
       success: false,
-      message: "Gagal mengambil detail spesies lebah",
+      message: "Gagal menghapus spesies lebah",
     });
   }
 };
