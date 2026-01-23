@@ -8,7 +8,7 @@ export const speciesUpdatedTemplate = ({
 }) => {
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-      <h2 style="color: #2c3e50;">📢 Perubahan Data Spesies Lebah</h2>
+      <h2 style="color: #2c3e50;"> Perubahan Data Spesies Lebah</h2>
 
       <p>Halo <strong>${adminName}</strong>,</p>
 
