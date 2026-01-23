@@ -156,6 +156,138 @@ export const rejectPractitioner = async (req, res) => {
   }
 };
 
+export const inactivateUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { reason, note } = req.body;
+
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        message: "Alasan penonaktifan wajib diisi",
+      });
+    }
+
+    const userRef = usersCollection.doc(userId);
+    const userSnap = await userRef.get();
+
+    if (!userSnap.exists) {
+      return res.status(404).json({
+        success: false,
+        message: "User tidak ditemukan",
+      });
+    }
+
+    const userData = userSnap.data();
+
+    if (userData.role === "SUPER_ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "Tidak dapat menonaktifkan SUPER_ADMIN",
+      });
+    }
+
+    if (userData.status === "INACTIVE") {
+      return res.status(400).json({
+        success: false,
+        message: "User sudah dalam status INACTIVE",
+      });
+    }
+
+    await userRef.update({
+      status: "INACTIVE",
+      inactivatedAt: new Date(),
+      inactivatedReason: reason,
+      inactivatedNote: note || null,
+    });
+
+    // (Opsional tapi sangat disarankan)
+    await db.collection("violation_logs").add({
+      userId,
+      userEmail: userData.email,
+      role: userData.role,
+      action: "INACTIVATE_USER",
+      reason,
+      note: note || null,
+      actionBy: req.user.userId, // SUPER_ADMIN
+      createdAt: new Date(),
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "User berhasil dinonaktifkan",
+    });
+  } catch (error) {
+    console.error("Inactivate user error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server internal sedang bermasalah",
+    });
+  }
+};
+
+export const reactivateUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { note } = req.body;
+
+    const userRef = usersCollection.doc(userId);
+    const userSnap = await userRef.get();
+
+    if (!userSnap.exists) {
+      return res.status(404).json({
+        success: false,
+        message: "User tidak ditemukan",
+      });
+    }
+
+    const userData = userSnap.data();
+
+    if (userData.role === "SUPER_ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "Tidak dapat mengubah status SUPER_ADMIN",
+      });
+    }
+
+    if (userData.status === "ACTIVE") {
+      return res.status(400).json({
+        success: false,
+        message: "User sudah dalam status ACTIVE",
+      });
+    }
+
+    // 🔄 Re-activate
+    await userRef.update({
+      status: "ACTIVE",
+      reactivatedAt: new Date(),
+      reactivatedNote: note || null,
+    });
+
+    // 🧾 Audit log
+    await db.collection("violation_logs").add({
+      userId,
+      userEmail: userData.email,
+      role: userData.role,
+      action: "REACTIVATE_USER",
+      note: note || null,
+      actionBy: req.user.userId, // SUPER_ADMIN
+      createdAt: new Date(),
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "User berhasil diaktifkan kembali",
+    });
+  } catch (error) {
+    console.error("Reactivate user error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server internal sedang bermasalah",
+    });
+  }
+};
+
 // export const rejectPractitioner = async (req, res) => {
 //   try {
 //     const { userId } = req.params;
