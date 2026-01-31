@@ -4,6 +4,7 @@ import authRoutes from "./routes/authRoute.js";
 import adminRoutes from "./routes/adminRoute.js";
 import userRoutes from "./routes/userRoute.js";
 import beeRoutes from "./routes/beeRoute.js";
+import classifyRoutes from "./routes/classifyRoute.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 
@@ -27,6 +28,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admin/practitioners", adminRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/bee", beeRoutes);
+app.use("/api/classify", classifyRoutes);
 
 // Test
 app.get("/", (req, res) => {
