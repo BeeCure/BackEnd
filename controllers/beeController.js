@@ -290,7 +290,10 @@ export const updateSpecies = async (req, res) => {
     const changes = generateChangeLog(oldData, updateData, ["searchKeywords"]);
 
     // ===== UPDATE FIRESTORE =====
-    await docRef.update(updateData);
+    await docRef.update({
+      ...updateData,
+      updatedBy: req.user.userId,
+    });
 
     // ===== SEND EMAIL TO SUPER ADMIN =====
     const updatedAtDate = updateData.updatedAt?.toDate?.() ?? new Date();
@@ -311,7 +314,10 @@ export const updateSpecies = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Data lebah berhasil diperbarui",
-      data: updateData,
+      data: {
+        ...updateData,
+        updatedBy,
+      },
     });
   } catch (error) {
     console.error("Update species error:", error);
