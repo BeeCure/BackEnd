@@ -127,12 +127,15 @@ export const classifyBee = async (req, res) => {
 
 export const getClassificationHistory = async (req, res) => {
   try {
+    const user = req.user;
+
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const status = req.query.status;
 
     let query = db
       .collection("classification_logs")
+      .where("userId", "==", user.userId)
       .orderBy("createdAt", "desc");
 
     if (status) {
@@ -145,7 +148,7 @@ export const getClassificationHistory = async (req, res) => {
       .get();
 
     const histories = snapshot.docs.map((doc) => ({
-      id: doc.userId,
+      id: doc.id,
       ...doc.data(),
     }));
 
@@ -171,12 +174,20 @@ export const getClassificationHistory = async (req, res) => {
 export const getClassificationHistoryById = async (req, res) => {
   try {
     const { id } = req.params;
+    const user = req.user;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "ID history tidak valid",
+      });
+    }
 
     const docRef = db.collection("classification_logs").doc(id);
     const docSnap = await docRef.get();
 
     if (!docSnap.exists) {
-      return res.status(400).json({
+      return res.status(404).json({
         success: false,
         message: "History klasifikasi tidak ditemukan",
       });
@@ -184,15 +195,23 @@ export const getClassificationHistoryById = async (req, res) => {
 
     const data = docSnap.data();
 
+    if (data.userId !== user.userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Anda tidak memiliki akses ke data ini",
+      });
+    }
+
     return res.status(200).json({
       success: true,
+      message: "Detail history klasifikasi berhasil diambil",
       data: {
-        id: docSnap,
+        id: docSnap.id,
         ...data,
       },
     });
   } catch (error) {
-    console.error("Get classification history by ID error: ", error);
+    console.error("Get classification history by id error:", error);
     return res.status(500).json({
       success: false,
       message: "Gagal mengambil detail history klasifikasi",
