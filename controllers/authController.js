@@ -15,7 +15,7 @@ export const register = async (req, res) => {
     if (!email || !password || !name || !role || !phone) {
       return res.status(400).json({
         success: false,
-        message: "Oooppss! Lengkapi dulu data anda!",
+        message: "Lengkapi dulu data anda!",
       });
     }
 
@@ -85,7 +85,7 @@ export const register = async (req, res) => {
 
     await usersCollection.doc(userId).set(newUser);
 
-    // 🔔 KIRIM EMAIL OTP (Resend)
+    // Kirim Token OTP ke Email (Resend)
     try {
       await sendVerificationOtpEmail(
         newUser.email,
@@ -94,7 +94,6 @@ export const register = async (req, res) => {
       );
     } catch (emailError) {
       console.error("Gagal mengirim email OTP:", emailError);
-      // Tidak menggagalkan register
     }
 
     return res.status(201).json({
@@ -129,13 +128,14 @@ export const login = async (req, res) => {
         success: false,
         message: "Email dan password anda wajib diisi!",
       });
-      // Check if email or password is empty
-    } else if (email === "" || password === "") {
-      return res.status(400).json({
-        success: false,
-        message: "Email dan password tidak boleh kosong!",
-      });
     }
+    // Check if email or password is empty
+    // else if (email === "" || password === "") {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Email dan password tidak boleh kosong!",
+    //   });
+    // }
 
     const snapshot = await usersCollection
       .where("email", "==", email.toLowerCase())
@@ -145,7 +145,7 @@ export const login = async (req, res) => {
     if (snapshot.empty) {
       return res.status(404).json({
         success: false,
-        message: "Ooooppss! Email atau password anda salah",
+        message: "Email atau password anda salah",
       });
     }
 
@@ -157,7 +157,7 @@ export const login = async (req, res) => {
     if (!isMatch) {
       return res.status(400).json({
         success: false,
-        message: "Oooppss! Email atau password anda salah",
+        message: "Email atau password anda salah",
       });
     }
 
@@ -166,7 +166,7 @@ export const login = async (req, res) => {
       return res.status(403).json({
         success: false,
         message:
-          "Email anda belum terverifikasi. Silakan verifikasi terlebih dahulu.",
+          "Email anda belum terverifikasi. Silakan verifikasi token OTP terlebih dahulu.",
       });
     }
 
@@ -199,7 +199,7 @@ export const login = async (req, res) => {
     // Return success response
     return res.status(200).json({
       success: true,
-      message: "Yeeayy! Anda berhasil login",
+      message: "Anda berhasil login",
       data: {
         role: user.role,
         name: user.name,
@@ -354,7 +354,7 @@ export const resendTokenOTP = async (req, res) => {
       });
     }
 
-    // (Opsional) Rate limit sederhana (misal 60 detik)
+    // Rate limit sederhana (misal 60 detik)
     if (
       user.verificationTokenExpiresAt &&
       user.verificationTokenExpiresAt.toDate() >
@@ -399,7 +399,7 @@ export const changePassword = async (req, res) => {
     if (!oldPassword || !newPassword) {
       return res.status(400).json({
         success: false,
-        message: "Password lama dan baru wajib diisi",
+        message: "Password lama dan password baru wajib diisi",
       });
     }
 

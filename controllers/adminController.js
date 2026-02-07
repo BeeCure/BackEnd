@@ -77,12 +77,12 @@ export const approvePractitioner = async (req, res) => {
 
 export const rejectPractitioner = async (req, res) => {
   try {
-    if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({
-        success: false,
-        message: "Akses ditolak",
-      });
-    }
+    // if (req.user.role !== "SUPER_ADMIN") {
+    //   return res.status(403).json({
+    //     success: false,
+    //     message: "Akses ditolak",
+    //   });
+    // }
 
     const { userId } = req.params;
     const { reason } = req.body;
@@ -111,7 +111,7 @@ export const rejectPractitioner = async (req, res) => {
     if (user.role !== "PRACTITIONER") {
       return res.status(400).json({
         success: false,
-        message: "User bukan practitioner",
+        message: "Anda bukan user praktisi",
       });
     }
 
@@ -145,7 +145,7 @@ export const rejectPractitioner = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Pengajuan practitioner berhasil ditolak",
+      message: "Pengajuan praktisi berhasil ditolak",
     });
   } catch (error) {
     console.error("Reject Practitioner Error:", error);
@@ -180,17 +180,17 @@ export const inactivateUser = async (req, res) => {
 
     const userData = userSnap.data();
 
-    if (userData.role === "SUPER_ADMIN") {
-      return res.status(403).json({
-        success: false,
-        message: "Tidak dapat menonaktifkan SUPER_ADMIN",
-      });
-    }
+    // if (userData.role === "SUPER_ADMIN") {
+    //   return res.status(403).json({
+    //     success: false,
+    //     message: "Tidak dapat menonaktifkan SUPER_ADMIN",
+    //   });
+    // }
 
     if (userData.status === "INACTIVE") {
       return res.status(400).json({
         success: false,
-        message: "User sudah dalam status INACTIVE",
+        message: "User sudah berstatus INACTIVE",
       });
     }
 
@@ -243,17 +243,17 @@ export const reactivateUser = async (req, res) => {
 
     const userData = userSnap.data();
 
-    if (userData.role === "SUPER_ADMIN") {
-      return res.status(403).json({
-        success: false,
-        message: "Tidak dapat mengubah status SUPER_ADMIN",
-      });
-    }
+    // if (userData.role === "SUPER_ADMIN") {
+    //   return res.status(403).json({
+    //     success: false,
+    //     message: "Tidak dapat mengubah status SUPER_ADMIN",
+    //   });
+    // }
 
     if (userData.status === "ACTIVE") {
       return res.status(400).json({
         success: false,
-        message: "User sudah dalam status ACTIVE",
+        message: "User sudah berstatus ACTIVE",
       });
     }
 

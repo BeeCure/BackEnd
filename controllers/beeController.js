@@ -22,7 +22,7 @@ export const createSpecies = async (req, res) => {
     if (!name || !scientificName || !genus) {
       return res.status(400).json({
         success: false,
-        message: "Nama, nama ilmiah, dan genus wajib diisi!!",
+        message: "Nama spesies, nama ilmiah, dan genus wajib diisi!!",
       });
     }
 
@@ -150,6 +150,7 @@ export const getSpeciesList = async (req, res) => {
 
     return res.status(200).json({
       success: true,
+      message: "Berhasil mengambil data spesies lebah",
       total: data.length,
       data,
     });
@@ -180,6 +181,7 @@ export const getSpeciesDetail = async (req, res) => {
 
     return res.status(200).json({
       success: true,
+      message: "Berhasil mengambil data spesies lebah",
       data: {
         id: docSnap.id,
         ...data,
@@ -279,7 +281,7 @@ export const updateSpecies = async (req, res) => {
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({
         success: false,
-        message: "Tidak ada data yang diupdate",
+        message: "Tidak ada data yang diperbarui",
       });
     }
 
@@ -331,12 +333,12 @@ export const updateSpecies = async (req, res) => {
 export const deleteSpecies = async (req, res) => {
   try {
     // ===== ROLE CHECK =====
-    if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({
-        success: false,
-        message: "Hanya SUPER_ADMIN yang dapat menghapus spesies",
-      });
-    }
+    // if (req.user.role !== "SUPER_ADMIN") {
+    //   return res.status(403).json({
+    //     success: false,
+    //     message: "Hanya SUPER_ADMIN yang dapat menghapus spesies",
+    //   });
+    // }
 
     const { id } = req.params;
     const { reason } = req.body;

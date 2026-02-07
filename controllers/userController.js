@@ -19,6 +19,7 @@ export const getProfile = async (req, res) => {
 
     res.status(200).json({
       success: true,
+      message: "Berhasil mengambil data profile anda",
       data: {
         name: userData.name,
         email: userData.email,
@@ -132,12 +133,12 @@ export const updateProfile = async (req, res) => {
 
 export const getAllUsers = async (req, res) => {
   try {
-    if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({
-        success: false,
-        message: "Akses ditolak: role tidak diizinkan!!",
-      });
-    }
+    // if (req.user.role !== "SUPER_ADMIN") {
+    //   return res.status(403).json({
+    //     success: false,
+    //     message: "Akses ditolak: role tidak diizinkan!!",
+    //   });
+    // }
 
     let query = usersCollection.where("role", "in", ["USER", "PRACTITIONER"]);
 
@@ -180,6 +181,7 @@ export const getAllUsers = async (req, res) => {
 
     return res.status(200).json({
       success: true,
+      message: "Berhasil mengambil seluruh data users",
       total: users.length,
       data: users,
     });
@@ -187,19 +189,19 @@ export const getAllUsers = async (req, res) => {
     console.error("Get all users error:", error);
     return res.status(500).json({
       success: false,
-      message: "Gagal mengambil data user",
+      message: "Server internal sedang bermasalah",
     });
   }
 };
 
 export const getAllPractitioners = async (req, res) => {
   try {
-    if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({
-        success: false,
-        message: "Akses ditolak",
-      });
-    }
+    // if (req.user.role !== "SUPER_ADMIN") {
+    //   return res.status(403).json({
+    //     success: false,
+    //     message: "Akses ditolak",
+    //   });
+    // }
 
     let query = usersCollection.where("role", "==", "PRACTITIONER");
 
@@ -238,6 +240,7 @@ export const getAllPractitioners = async (req, res) => {
 
     return res.status(200).json({
       success: true,
+      message: "Berhasil mengambil seluruh data user praktisi",
       total: practitioners.length,
       data: practitioners,
     });
@@ -259,7 +262,7 @@ export const getPractitionerById = async (req, res) => {
     if (!docSnap.exists) {
       return res.status(404).json({
         success: false,
-        message: "Praktisi tidak ditemukan",
+        message: "User praktisi tidak ditemukan",
       });
     }
 
@@ -268,12 +271,13 @@ export const getPractitionerById = async (req, res) => {
     if (userData.role !== "PRACTITIONER") {
       return res.status(400).json({
         success: false,
-        message: "User bukan praktisi",
+        message: "Anda bukan user praktisi",
       });
     }
 
     return res.status(200).json({
       success: true,
+      message: "Berhasil mengambil data user praktisi",
       data: {
         id: docSnap.userId,
         name: userData.name ?? null,

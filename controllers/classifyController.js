@@ -52,7 +52,7 @@ export const classifyBee = async (req, res) => {
       console.error("AI SERVICE ERROR:", err?.response?.data || err);
       return res.status(503).json({
         success: false,
-        message: "AI service tidak tersedia",
+        message: "Layanan AI tidak tersedia",
       });
     }
 
