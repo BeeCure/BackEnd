@@ -25,16 +25,8 @@ router.post(
   ]),
   createSpecies,
 );
-router.get(
-  "/species",
-  authorizeRoles("PRACTITIONER", "SUPER_ADMIN"),
-  getSpeciesList,
-);
-router.get(
-  "/species/:id",
-  authorizeRoles("PRACTITIONER", "SUPER_ADMIN"),
-  getSpeciesDetail,
-);
+router.get("/species", getSpeciesList);
+router.get("/species/:id", getSpeciesDetail);
 router.put(
   "/species/:id",
   authorizeRoles("PRACTITIONER", "SUPER_ADMIN"),
