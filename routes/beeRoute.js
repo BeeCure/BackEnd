@@ -12,10 +12,9 @@ import { upload } from "../middlewares/uploadMiddleware.js";
 
 const router = express.Router();
 
-router.use(protect);
-
 router.post(
   "/add",
+  protect,
   authorizeRoles("PRACTITIONER", "SUPER_ADMIN"),
   upload.fields([
     { name: "bodyShape", maxCount: 1 },
@@ -29,6 +28,7 @@ router.get("/species", getSpeciesList);
 router.get("/species/:id", getSpeciesDetail);
 router.put(
   "/species/:id",
+  protect,
   authorizeRoles("PRACTITIONER", "SUPER_ADMIN"),
   upload.fields([
     { name: "bodyShape", maxCount: 1 },
@@ -38,6 +38,11 @@ router.put(
   ]),
   updateSpecies,
 );
-router.delete("/species/:id", authorizeRoles("SUPER_ADMIN"), deleteSpecies);
+router.delete(
+  "/species/:id",
+  protect,
+  authorizeRoles("SUPER_ADMIN"),
+  deleteSpecies,
+);
 
 export default router;
