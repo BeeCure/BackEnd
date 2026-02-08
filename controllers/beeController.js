@@ -318,7 +318,6 @@ export const updateSpecies = async (req, res) => {
       message: "Data lebah berhasil diperbarui",
       data: {
         ...updateData,
-        updatedBy,
       },
     });
   } catch (error) {
