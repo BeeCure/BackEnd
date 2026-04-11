@@ -31,7 +31,7 @@ export const forgotPasswordEmailTemplate = ({
           font-size:22px;
           letter-spacing:1px;
         ">
-          🐝 BeeVra
+          BeeVra
         </h1>
       </div>
 
@@ -93,7 +93,7 @@ export const forgotPasswordEmailTemplate = ({
           text-align:center;
           margin-top:20px;
         ">
-          Link ini berlaku selama <strong>15 menit</strong>.
+          Link ini berlaku selama <strong>10 menit</strong>.
         </p>
 
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:30px 0;" />

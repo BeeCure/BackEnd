@@ -68,7 +68,7 @@ export const classifyBee = async (req, res) => {
     let message;
 
     switch (aiData.decision) {
-      case "OOC":
+      case "Out of Context":
         status = "REJECTED";
         message = "Gambar bukan lebah";
         break;
@@ -105,7 +105,7 @@ export const classifyBee = async (req, res) => {
     });
 
     return res.status(200).json({
-      success: aiData.decision !== "OOC",
+      success: aiData.decision !== "Out of Context",
       message,
       data: {
         species: aiData.species,

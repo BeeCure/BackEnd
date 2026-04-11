@@ -77,13 +77,6 @@ export const approvePractitioner = async (req, res) => {
 
 export const rejectPractitioner = async (req, res) => {
   try {
-    // if (req.user.role !== "SUPER_ADMIN") {
-    //   return res.status(403).json({
-    //     success: false,
-    //     message: "Akses ditolak",
-    //   });
-    // }
-
     const { userId } = req.params;
     const { reason } = req.body;
 
@@ -138,7 +131,7 @@ export const rejectPractitioner = async (req, res) => {
       html: practitionerRejectedTemplate({
         name: user.name,
         reason,
-        // link reapply → frontend
+        // link reapply to frontend
         reapplyUrl: `${process.env.FRONTEND_URL}/reapply`,
       }),
     });
@@ -180,13 +173,6 @@ export const inactivateUser = async (req, res) => {
 
     const userData = userSnap.data();
 
-    // if (userData.role === "SUPER_ADMIN") {
-    //   return res.status(403).json({
-    //     success: false,
-    //     message: "Tidak dapat menonaktifkan SUPER_ADMIN",
-    //   });
-    // }
-
     if (userData.status === "INACTIVE") {
       return res.status(400).json({
         success: false,
@@ -201,7 +187,6 @@ export const inactivateUser = async (req, res) => {
       inactivatedNote: note || null,
     });
 
-    // (Opsional tapi sangat disarankan)
     await db.collection("violation_logs").add({
       userId,
       userEmail: userData.email,
@@ -243,13 +228,6 @@ export const reactivateUser = async (req, res) => {
 
     const userData = userSnap.data();
 
-    // if (userData.role === "SUPER_ADMIN") {
-    //   return res.status(403).json({
-    //     success: false,
-    //     message: "Tidak dapat mengubah status SUPER_ADMIN",
-    //   });
-    // }
-
     if (userData.status === "ACTIVE") {
       return res.status(400).json({
         success: false,
@@ -257,14 +235,12 @@ export const reactivateUser = async (req, res) => {
       });
     }
 
-    // 🔄 Re-activate
     await userRef.update({
       status: "ACTIVE",
       reactivatedAt: new Date(),
       reactivatedNote: note || null,
     });
 
-    // 🧾 Audit log
     await db.collection("violation_logs").add({
       userId,
       userEmail: userData.email,

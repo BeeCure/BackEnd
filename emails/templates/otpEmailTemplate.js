@@ -26,7 +26,7 @@ export const otpEmailTemplate = ({ name, otp, title, subtitle }) => {
           font-size:22px;
           letter-spacing:1px;
         ">
-          🐝 BeeVra
+          BeeVra
         </h1>
       </div>
 
@@ -131,7 +131,7 @@ export const practitionerApprovedTemplate = ({ name }) => {
                   <p>Halo <strong>${name}</strong>,</p>
 
                   <p>
-                    Selamat 🎉  
+                    Selamat  
                     Akun kamu sebagai <strong>Practitioner</strong> telah
                     <strong style="color:#38a169;">disetujui</strong>.
                   </p>
