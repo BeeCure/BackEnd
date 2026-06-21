@@ -9,84 +9,78 @@ export const classifyBee = async (req, res) => {
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: "Gambar lebah wajib diunggah",
+        message: "Gambar lebah wajib diunggah.",
       });
     }
 
     if (!req.file.mimetype.startsWith("image/")) {
       return res.status(400).json({
         success: false,
-        message: "File harus berupa gambar",
+        message: "File harus berupa gambar.",
       });
     }
 
     const docRef = db.collection("classification_logs").doc();
-
-    const ext = req.file.mimetype.split("/")[1];
-    const filename = `classifications/${docRef.id}.${ext}`;
+    const extension = req.file.originalname.split(".").pop();
+    const filename = `classifications/${docRef.id}.${extension}`;
     const storageFile = bucket.file(filename);
-
     await storageFile.save(req.file.buffer, {
       metadata: {
         contentType: req.file.mimetype,
-        cacheControl: "public, max-age=31536000",
+        cacheControl: "public,max-age=31536000",
       },
       public: true,
     });
 
     const imageUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
 
-    const form = new FormData();
-    form.append("image", req.file.buffer, {
+    const formData = new FormData();
+
+    formData.append("file", req.file.buffer, {
       filename: req.file.originalname,
       contentType: req.file.mimetype,
     });
 
-    let aiRes;
+    let aiResponse;
+
     try {
-      aiRes = await axios.post(`${process.env.BEE_MODEL_URL}/predict`, form, {
-        headers: form.getHeaders(),
-        timeout: 15000,
-      });
-    } catch (err) {
-      console.error("AI SERVICE ERROR:", err?.response?.data || err);
+      aiResponse = await axios.post(
+        `${process.env.BEE_MODEL_URL}/predict`,
+        formData,
+        {
+          headers: formData.getHeaders(),
+          timeout: 30000,
+        },
+      );
+    } catch (error) {
+      console.error("AI Service Error:");
+
+      if (error.response) {
+        console.error(error.response.data);
+      } else {
+        console.error(error.message);
+      }
+
       return res.status(503).json({
         success: false,
-        message: "Layanan AI tidak tersedia",
+        message: "Layanan AI tidak tersedia.",
       });
     }
 
-    const aiData = aiRes?.data?.data;
-    if (!aiData || !aiData.decision) {
+    const aiResult = aiResponse.data;
+
+    if (!aiResult.success) {
       return res.status(500).json({
         success: false,
-        message: "Response AI tidak valid",
+        message: aiResult.message,
       });
     }
 
-    let status;
-    let message;
+    const prediction = aiResult.data;
 
-    switch (aiData.decision) {
-      case "Out of Context":
-        status = "REJECTED";
-        message = "Gambar bukan lebah";
-        break;
-
-      case "REVIEW":
-        status = "PENDING_REVIEW";
-        message = "Gambar perlu verifikasi manual";
-        break;
-
-      case "CONFIDENT":
-        status = "APPROVED";
-        message = "Klasifikasi berhasil";
-        break;
-
-      default:
-        status = "ERROR";
-        message = "Keputusan AI tidak valid";
-    }
+    // ============================
+    // Save Classification Log
+    // ============================
 
     await docRef.set({
       id: docRef.id,
@@ -95,32 +89,35 @@ export const classifyBee = async (req, res) => {
 
       imageUrl,
 
-      species: aiData.species ?? null,
-      confidence: Number(aiData.confidence),
-      similarity: Number(aiData.similarity),
-      decision: aiData.decision,
-      status,
-
+      prediction: prediction.prediction,
+      classId: prediction.class_id,
+      confidence: Number(prediction.confidence),
+      processingTime: Number(prediction.processing_time_ms),
+      model: prediction.model,
+      topPredictions: prediction.top_predictions,
       createdAt: new Date(),
     });
 
     return res.status(200).json({
-      success: aiData.decision !== "Out of Context",
-      message,
+      success: true,
+      message: "Klasifikasi berhasil.",
       data: {
-        species: aiData.species,
-        confidence: aiData.confidence,
-        similarity: aiData.similarity,
-        decision: aiData.decision,
+        id: docRef.id,
         imageUrl,
+        prediction: prediction.prediction,
+        classId: prediction.class_id,
+        confidence: prediction.confidence,
+        processingTime: prediction.processing_time_ms,
+        model: prediction.model,
+        topPredictions: prediction.top_predictions,
       },
     });
   } catch (error) {
-    console.error("Bee classification error:", error);
-
+    console.error("Classification Error:");
+    console.error(error);
     return res.status(500).json({
       success: false,
-      message: "Gagal melakukan klasifikasi lebah",
+      message: "Terjadi kesalahan pada server.",
     });
   }
 };
@@ -218,3 +215,126 @@ export const getClassificationHistoryById = async (req, res) => {
     });
   }
 };
+
+// export const classifyBee = async (req, res) => {
+//   try {
+//     const user = req.user;
+
+//     if (!req.file) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Gambar lebah wajib diunggah",
+//       });
+//     }
+
+//     if (!req.file.mimetype.startsWith("image/")) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "File harus berupa gambar",
+//       });
+//     }
+
+//     const docRef = db.collection("classification_logs").doc();
+
+//     const ext = req.file.mimetype.split("/")[1];
+//     const filename = `classifications/${docRef.id}.${ext}`;
+//     const storageFile = bucket.file(filename);
+
+//     await storageFile.save(req.file.buffer, {
+//       metadata: {
+//         contentType: req.file.mimetype,
+//         cacheControl: "public, max-age=31536000",
+//       },
+//       public: true,
+//     });
+
+//     const imageUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+
+//     const form = new FormData();
+//     form.append("image", req.file.buffer, {
+//       filename: req.file.originalname,
+//       contentType: req.file.mimetype,
+//     });
+
+//     let aiRes;
+//     try {
+//       aiRes = await axios.post(`${process.env.BEE_MODEL_URL}/predict`, form, {
+//         headers: form.getHeaders(),
+//         timeout: 15000,
+//       });
+//     } catch (err) {
+//       console.error("AI SERVICE ERROR:", err?.response?.data || err);
+//       return res.status(503).json({
+//         success: false,
+//         message: "Layanan AI tidak tersedia",
+//       });
+//     }
+
+//     const aiData = aiRes?.data?.data;
+//     if (!aiData || !aiData.decision) {
+//       return res.status(500).json({
+//         success: false,
+//         message: "Response AI tidak valid",
+//       });
+//     }
+
+//     let status;
+//     let message;
+
+//     switch (aiData.decision) {
+//       case "Out of Context":
+//         status = "REJECTED";
+//         message = "Gambar bukan lebah";
+//         break;
+
+//       case "REVIEW":
+//         status = "PENDING_REVIEW";
+//         message = "Gambar perlu verifikasi manual";
+//         break;
+
+//       case "CONFIDENT":
+//         status = "APPROVED";
+//         message = "Klasifikasi berhasil";
+//         break;
+
+//       default:
+//         status = "ERROR";
+//         message = "Keputusan AI tidak valid";
+//     }
+
+//     await docRef.set({
+//       id: docRef.id,
+//       userId: user.userId,
+//       role: user.role,
+
+//       imageUrl,
+
+//       species: aiData.species ?? null,
+//       confidence: Number(aiData.confidence),
+//       similarity: Number(aiData.similarity),
+//       decision: aiData.decision,
+//       status,
+
+//       createdAt: new Date(),
+//     });
+
+//     return res.status(200).json({
+//       success: aiData.decision !== "Out of Context",
+//       message,
+//       data: {
+//         species: aiData.species,
+//         confidence: aiData.confidence,
+//         similarity: aiData.similarity,
+//         decision: aiData.decision,
+//         imageUrl,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Bee classification error:", error);
+
+//     return res.status(500).json({
+//       success: false,
+//       message: "Gagal melakukan klasifikasi lebah",
+//     });
+//   }
+// };
