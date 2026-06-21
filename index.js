@@ -5,11 +5,12 @@ import adminRoutes from "./routes/adminRoute.js";
 import userRoutes from "./routes/userRoute.js";
 import beeRoutes from "./routes/beeRoute.js";
 import classifyRoutes from "./routes/classifyRoute.js";
+import activitiesRoutes from "./routes/activitiesRoute.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT;
 
 app.use(express.json());
 app.use(cookieParser());
@@ -33,6 +34,7 @@ app.use("/api/admin/practitioners", adminRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/bee", beeRoutes);
 app.use("/api/classify", classifyRoutes);
+app.use("/api/activities", activitiesRoutes);
 
 // Test
 app.get("/", (req, res) => {
