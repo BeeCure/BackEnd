@@ -4,9 +4,6 @@ import { generateSearchKeywords } from "../utils/generateSearchKeyword.js";
 
 const activityCollection = db.collection("activities");
 
-/**
- * Upload image to Firebase Storage
- */
 const uploadCoverImage = async (file, activityId) => {
   const extension = file.mimetype.split("/")[1];
   const filePath = `activities/${activityId}/cover.${extension}`;
@@ -20,9 +17,7 @@ const uploadCoverImage = async (file, activityId) => {
   });
   return `https://storage.googleapis.com/${bucket.name}/${filePath}`;
 };
-/**
- * Delete old image
- */
+
 const deleteOldImage = async (imageUrl) => {
   try {
     if (!imageUrl) return;
@@ -85,9 +80,7 @@ export const createActivity = async (req, res) => {
     });
   }
 };
-/**
- * Get Activity List
- */
+
 export const getActivityList = async (req, res) => {
   try {
     const { search = "", status = "ACTIVE", limit = 20 } = req.query;
@@ -123,9 +116,7 @@ export const getActivityList = async (req, res) => {
     });
   }
 };
-/**
- * Detail Activity
- */
+
 export const getActivityDetail = async (req, res) => {
   try {
     const doc = await activityCollection.doc(req.params.id).get();
@@ -153,9 +144,6 @@ export const getActivityDetail = async (req, res) => {
   }
 };
 
-/**
- * Update Activity
- */
 export const updateActivity = async (req, res) => {
   try {
     const activityRef = activityCollection.doc(req.params.id);
@@ -200,9 +188,7 @@ export const updateActivity = async (req, res) => {
     });
   }
 };
-/**
- * Delete Activity
- */
+
 export const deleteActivity = async (req, res) => {
   try {
     const activityRef = activityCollection.doc(req.params.id);
