@@ -125,24 +125,17 @@ export const classifyBee = async (req, res) => {
 export const getClassificationHistory = async (req, res) => {
   try {
     const user = req.user;
-
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 10;
     const status = req.query.status;
 
     let query = db
       .collection("classification_logs")
-      .where("userId", "==", user.userId)
-      .orderBy("createdAt", "desc");
+      .where("userId", "==", user.userId);
 
     if (status) {
       query = query.where("status", "==", status);
     }
 
-    const snapshot = await query
-      .offset((page - 1) * limit)
-      .limit(limit)
-      .get();
+    const snapshot = await query.orderBy("createdAt", "desc").get();
 
     const histories = snapshot.docs.map((doc) => ({
       id: doc.id,
@@ -152,15 +145,12 @@ export const getClassificationHistory = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "History klasifikasi berhasil diambil",
-      meta: {
-        page,
-        limit,
-        total: histories.length,
-      },
+      total: histories.length,
       data: histories,
     });
   } catch (error) {
     console.error("Get classification history error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Gagal mengambil history klasifikasi",
@@ -215,6 +205,52 @@ export const getClassificationHistoryById = async (req, res) => {
     });
   }
 };
+
+// export const getClassificationHistory = async (req, res) => {
+//   try {
+//     const user = req.user;
+
+//     const page = Number(req.query.page) || 1;
+//     const limit = Number(req.query.limit) || 10;
+//     const status = req.query.status;
+
+//     let query = db
+//       .collection("classification_logs")
+//       .where("userId", "==", user.userId)
+//       .orderBy("createdAt", "desc");
+
+//     if (status) {
+//       query = query.where("status", "==", status);
+//     }
+
+//     const snapshot = await query
+//       .offset((page - 1) * limit)
+//       .limit(limit)
+//       .get();
+
+//     const histories = snapshot.docs.map((doc) => ({
+//       id: doc.id,
+//       ...doc.data(),
+//     }));
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "History klasifikasi berhasil diambil",
+//       meta: {
+//         page,
+//         limit,
+//         total: histories.length,
+//       },
+//       data: histories,
+//     });
+//   } catch (error) {
+//     console.error("Get classification history error:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Gagal mengambil history klasifikasi",
+//     });
+//   }
+// };
 
 // export const classifyBee = async (req, res) => {
 //   try {
