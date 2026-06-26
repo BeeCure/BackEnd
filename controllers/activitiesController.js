@@ -6,7 +6,8 @@ const activityCollection = db.collection("activities");
 
 const uploadCoverImage = async (file, activityId) => {
   const extension = file.mimetype.split("/")[1];
-  const filePath = `activities/${activityId}/cover.${extension}`;
+  const fileName = `cover_${Date.now()}.${extension}`;
+  const filePath = `activities/${activityId}/${fileName}`;
   const storageFile = bucket.file(filePath);
   await storageFile.save(file.buffer, {
     metadata: {
@@ -159,8 +160,9 @@ export const updateActivity = async (req, res) => {
     const oldData = snapshot.data();
     let coverImage = oldData.coverImage;
     if (req.file) {
+      const newImage = await uploadCoverImage(req.file, req.params.id);
       await deleteOldImage(oldData.coverImage);
-      coverImage = await uploadCoverImage(req.file, req.params.id);
+      coverImage = newImage;
     }
 
     const updateData = {
