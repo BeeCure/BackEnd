@@ -129,7 +129,7 @@ export const createSpecies = async (req, res) => {
 
 export const getSpeciesList = async (req, res) => {
   try {
-    const { search = "", status = "ACTIVE", limit = 10 } = req.query;
+    const { search = "", status = "ACTIVE" } = req.query;
 
     let query = beeCollection.where("status", "==", status);
 
@@ -141,9 +141,9 @@ export const getSpeciesList = async (req, res) => {
       );
     }
 
-    const snap = await query.limit(Number(limit)).get();
+    const snapshot = await query.get();
 
-    const data = snap.docs.map((doc) => ({
+    const data = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     }));
@@ -156,6 +156,7 @@ export const getSpeciesList = async (req, res) => {
     });
   } catch (error) {
     console.error("Get species list error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Gagal mengambil data spesies lebah",
